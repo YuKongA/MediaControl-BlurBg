@@ -1,0 +1,13 @@
+[versions]
+agp = "8.2.2"
+ezXHelper = "2.0.8"
+kotlin = "1.9.22"
+xposed = "82"
+
+[libraries]
+ezXHelper = { module = "com.github.kyuubiran:EzXHelper", version.ref = "ezXHelper" }
+xposed = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

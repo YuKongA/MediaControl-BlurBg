@@ -3,10 +3,12 @@ agp = "8.2.2"
 ezXHelper = "2.0.8"
 kotlin = "1.9.22"
 xposed = "82"
+core = "1.12.0"
 
 [libraries]
 ezXHelper = { module = "com.github.kyuubiran:EzXHelper", version.ref = "ezXHelper" }
 xposed = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
+core = { group = "androidx.core", name = "core", version.ref = "core" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -53,6 +53,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.core)
     compileOnly(libs.xposed)
     implementation(libs.ezXHelper)
 }

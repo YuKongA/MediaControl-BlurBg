@@ -12,10 +12,10 @@ android {
 
     defaultConfig {
         applicationId = namespace
-        minSdk = 33
+        minSdk = 34
         targetSdk = 34
-        versionCode = 1001
-        versionName = "1.0.1"
+        versionCode = 1999
+        versionName = "2.0.0-wip"
     }
 
     buildTypes {
@@ -56,4 +56,5 @@ dependencies {
     implementation(libs.core)
     compileOnly(libs.xposed)
     implementation(libs.ezXHelper)
+    implementation(libs.hiddenapibypass)
 }

@@ -1,16 +1,13 @@
 package top.yukonga.mediaControlBlur
 
 import android.app.AndroidAppHelper
-import android.content.res.Resources.getSystem
-import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Paint
 import android.graphics.drawable.Icon
-import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import com.github.kyuubiran.ezxhelper.ClassUtils.loadClassOrNull
 import com.github.kyuubiran.ezxhelper.EzXHelper
 import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
@@ -22,6 +19,7 @@ import com.github.kyuubiran.ezxhelper.finders.MethodFinder.`-Static`.methodFinde
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import top.yukonga.mediaControlBlur.blur.BlurView
 
 private const val TAG = "MediaControlBlur"
 private var artwork: Icon? = null
@@ -42,72 +40,63 @@ class MainHook : IXposedHookLoadPackage {
                     miuiMediaControlPanel?.constructorFinder()?.toList()?.createHooks {
                         after {
                             val context = AndroidAppHelper.currentApplication().applicationContext
-                            var mBlurFrameLayout = XposedHelpers.getAdditionalInstanceField(it.thisObject, "mBlurFrameLayout")
-                            if (mBlurFrameLayout != null) return@after
-                            mBlurFrameLayout = FrameLayout(context)
-                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "mBlurFrameLayout", mBlurFrameLayout)
+                            var mFrameLayout = XposedHelpers.getAdditionalInstanceField(it.thisObject, "mFrameLayout")
+                            if (mFrameLayout != null) return@after
+                            mFrameLayout = FrameLayout(context)
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "mFrameLayout", mFrameLayout)
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "imageViewTopLeft", ImageView(context))
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "imageViewTopRight", ImageView(context))
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "imageViewBottomLeft", ImageView(context))
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "imageViewBottomRight", ImageView(context))
+                            XposedHelpers.setAdditionalInstanceField(it.thisObject, "mBlurView", BlurView(context, 60))
                         }
                     }
 
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createHook {
                         after {
-                            val context = AndroidAppHelper.currentApplication().applicationContext
+                            val mIsArtworkUpdate = it.thisObject.objectHelper().getObjectOrNullAs<Boolean>("mIsArtworkUpdate")
 
-                            val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
-                            val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
-                            val player = mediaBg.parent as ViewGroup? ?: return@after
-                            val playParent = player.parent as ViewGroup? ?: return@after
+                            if (mIsArtworkUpdate == true) {
+                                val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val mBlurFrameLayout = XposedHelpers.getAdditionalInstanceField(it.thisObject, "mBlurFrameLayout") as FrameLayout
+                                val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
+                                val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
+                                val player = mediaBg.parent as ViewGroup? ?: return@after
+                                val playParent = player.parent as ViewGroup? ?: return@after
 
-                            artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork")
+                                val mFrameLayout = XposedHelpers.getAdditionalInstanceField(it.thisObject, "mFrameLayout") as FrameLayout
+                                val mBlurView = XposedHelpers.getAdditionalInstanceField(it.thisObject, "mBlurView") as BlurView
 
-                            val artworkLayer = artwork?.loadDrawable(context) ?: return@after
-                            val artworkBitmap = Bitmap.createBitmap(artworkLayer.intrinsicWidth, artworkLayer.intrinsicHeight, Bitmap.Config.ARGB_8888)
-                            val canvas = Canvas(artworkBitmap)
-                            artworkLayer.setBounds(0, 0, artworkLayer.intrinsicWidth, artworkLayer.intrinsicHeight)
-                            artworkLayer.draw(canvas)
+                                artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork")
+                                val artworkLayer = artwork?.loadDrawable(context) ?: return@after
+                                mFrameLayout.background = artworkLayer
 
-                            val roundedBitmapDrawable = RoundedBitmapDrawableFactory.create(context.resources, artworkBitmap)
-                            roundedBitmapDrawable.cornerRadius = 60f
-                            mBlurFrameLayout.background = roundedBitmapDrawable
+                                val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, playParent.height)
+                                mFrameLayout.layoutParams = params
+                                mBlurView.layoutParams = params
 
-                            val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, playParent.height)
-                            mBlurFrameLayout.layoutParams = params
+                                if (player.indexOfChild(mFrameLayout) == -1) {
+                                    player.addView(mFrameLayout, 0)
+                                }
 
-                            player.addView(mBlurFrameLayout, 0)
+                                if (mFrameLayout.indexOfChild(mBlurView) == -1) {
+                                    mFrameLayout.addView(mBlurView, 0)
+                                }
+                            }
+                        }
+
+                        val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
+                        playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createHook {
+                            before {
+                                (it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1"))?.alpha = 0
+                                (it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2"))?.alpha = 0
+                                it.thisObject.objectHelper().setObject("mRadius", 0.0f)
+
+                                val mediaBg = it.thisObject as ImageView
+                                mediaBg.setAlpha(0f)
+                            }
                         }
                     }
-
-//                    val mediaCarouselController = loadClassOrNull("com.android.systemui.media.controls.ui.MediaCarouselController")
-//                    mediaCarouselController?.methodFinder()?.filterByName("addOrUpdatePlayer")?.first()?.createHook {
-//                        before {
-//                            val context = AndroidAppHelper.currentApplication().applicationContext
-//                            val mediaContent = it.thisObject.objectHelper().getObjectOrNull("mediaContent") as ViewGroup
-//                            val player = mediaContent.getChildAt(0) as ViewGroup
-//                            val mediaControlPanelFactory = it.thisObject.objectHelper().getObjectOrNull("mediaControlPanelFactory") ?: return@before
-//                            val mMiuiMediaControlPanel = XposedHelpers.callMethod(mediaControlPanelFactory, "get") ?: return@before
-//                            val mBlurFrameLayout = XposedHelpers.getAdditionalInstanceField(mMiuiMediaControlPanel, "mBlurFrameLayout") as FrameLayout
-//
-//                            val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, player.height)
-//                            mBlurFrameLayout.layoutParams = params
-//
-//                            //player.addView(mBlurFrameLayout, 0)
-//                        }
-//                    }
-
-                    val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
-                    playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createHook {
-                        before {
-                            (it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1"))?.alpha = 0
-                            (it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2"))?.alpha = 0
-                            it.thisObject.objectHelper().setObject("mRadius", 0.0f)
-
-                            val mediaBg = it.thisObject as ImageView
-                            mediaBg.setAlpha(0f)
-                        }
-                    }
-
                 } catch (t: Throwable) {
                     Log.ex(t)
                 }
@@ -119,4 +108,4 @@ class MainHook : IXposedHookLoadPackage {
 
 }
 
-val Int.dp: Int get() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), getSystem().displayMetrics).toInt()
+fun isDarkMode(context: Context): Boolean = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES

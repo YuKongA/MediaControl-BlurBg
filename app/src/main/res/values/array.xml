@@ -1,6 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Xposed scope -->
     <string-array name="xposed_scope">
         <item>com.android.systemui</item>
     </string-array>
+
+    <!-- Notification element blend colors -->
+    <!-- Light -->
+    <array name="notification_element_blend_headsUp_colors_light">
+        <item>#919191</item>
+        <item>107</item>
+        <item>#ccfa00</item>
+        <item>106</item>
+    </array>
+    <array name="notification_element_blend_keyguard_colors_light">
+        <item>#919191</item>
+        <item>107</item>
+        <item>#bdfa00</item>
+        <item>106</item>
+    </array>
+    <array name="notification_element_blend_shade_colors_light">
+        <item>#818181</item>
+        <item>107</item>
+        <item>#b3ff00</item>
+        <item>106</item>
+    </array>
+
+    <!-- Night -->
+    <array name="notification_element_blend_headsUp_colors_night">
+        <item>#777777</item>
+        <item>107</item>
+        <item>#1a7300</item>
+        <item>106</item>
+    </array>
+    <array name="notification_element_blend_keyguard_colors_night">
+        <item>#777777</item>
+        <item>107</item>
+        <item>#265900</item>
+        <item>106</item>
+    </array>
+    <array name="notification_element_blend_shade_colors_night">
+        <item>#80474747</item>
+        <item>107</item>
+        <item>#0fcc00</item>
+        <item>106</item>
+    </array>
 </resources>

@@ -14,8 +14,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 34
-        versionCode = 2000
-        versionName = "2.0.0"
+        versionCode = 2010
+        versionName = "2.0.1"
     }
 
     buildTypes {
@@ -58,7 +58,5 @@ android {
 
 dependencies {
     compileOnly(libs.xposed)
-    implementation(libs.coreKtx)
     implementation(libs.ezXHelper)
-    implementation(libs.hiddenapibypass)
 }

@@ -1,16 +1,12 @@
 [versions]
 agp = "8.2.2"
-coreKtx = "1.12.0"
 ezXHelper = "2.0.8"
 kotlin = "1.9.22"
 xposed = "82"
-hiddenapibypass = "4.3"
 
 [libraries]
-coreKtx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 ezXHelper = { module = "com.github.kyuubiran:EzXHelper", version.ref = "ezXHelper" }
 xposed = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
-hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenapibypass" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

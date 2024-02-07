@@ -4,36 +4,83 @@ import android.graphics.Outline
 import android.util.Log
 import android.view.View
 import android.view.ViewOutlineProvider
-import org.lsposed.hiddenapibypass.HiddenApiBypass
+import top.yukonga.mediaControlBlur.utils.AppUtils.getProp
 
 object MiBlurUtils {
 
-    fun View.setMiBackgroundBlurMode(i: Int) {
-        HiddenApiBypass.invoke(View::class.java, this, "setMiBackgroundBlurMode", i)
+    private val setMiViewBlurMode by lazy {
+        View::class.java.getDeclaredMethod("setMiViewBlurMode", Integer.TYPE)
+    }
+    private val setMiBackgroundBlurMode by lazy {
+        View::class.java.getDeclaredMethod("setMiBackgroundBlurMode", Integer.TYPE)
+    }
+    private val setPassWindowBlurEnabled by lazy {
+        View::class.java.getDeclaredMethod("setPassWindowBlurEnabled", java.lang.Boolean.TYPE)
+    }
+    private val setMiBackgroundBlurRadius by lazy {
+        View::class.java.getDeclaredMethod("setMiBackgroundBlurRadius", Integer.TYPE)
+    }
+    private val addMiBackgroundBlendColor by lazy {
+        View::class.java.getDeclaredMethod("addMiBackgroundBlendColor", Integer.TYPE, Integer.TYPE)
+    }
+    private val setMiBackgroundBlurScaleRatio by lazy {
+        View::class.java.getDeclaredMethod("setMiBackgroundBlurScaleRatio", java.lang.Float.TYPE)
+    }
+    private val clearMiBackgroundBlendColor by lazy {
+        View::class.java.getDeclaredMethod("clearMiBackgroundBlendColor")
     }
 
-    fun View.setMiViewBlurMode(i: Int) {
-        HiddenApiBypass.invoke(View::class.java, this, "setMiViewBlurMode", i)
+    private val disableMiBackgroundContainBelow by lazy {
+        View::class.java.getDeclaredMethod("disableMiBackgroundContainBelow", java.lang.Boolean.TYPE)
     }
 
-    fun View.setMiBackgroundBlurRadius(i: Int) {
-        if (i < 0 || i > 200) {
-            Log.e("MiBlurUtils", "setMiBackgroundBlurRadius error radius is " + i + " " + this.javaClass.getName() + " hashcode " + this.hashCode())
+    private val isBackgroundBlurSupported by lazy {
+        try {
+            getProp("persist.sys.background_blur_supported").toBoolean()
+        }
+        catch (e: Exception) {
+            false
+        }
+    }
+
+    fun View.setMiBackgroundBlurMode(mode: Int) {
+        setMiBackgroundBlurMode.invoke(this, mode)
+    }
+
+    fun View.setMiViewBlurMode(mode: Int) {
+        setMiViewBlurMode.invoke(this, mode)
+    }
+
+    fun View.setMiBackgroundBlurRadius(radius: Int) {
+        if (radius < 0 || radius > 200) {
+            Log.e("MiBlurUtils", "setMiBackgroundBlurRadius error radius is " + radius + " " + this.javaClass.getName() + " hashcode " + this.hashCode())
             return
         }
-        HiddenApiBypass.invoke(View::class.java, this, "setMiBackgroundBlurRadius", i)
+        setMiBackgroundBlurRadius.invoke(this, radius)
     }
 
     fun View.setPassWindowBlurEnabled(z: Boolean) {
-        HiddenApiBypass.invoke(View::class.java, this, "setPassWindowBlurEnabled", z)
+        setPassWindowBlurEnabled.invoke(this, z)
     }
 
     fun View.disableMiBackgroundContainBelow(z: Boolean) {
-        HiddenApiBypass.invoke(View::class.java, this, "disableMiBackgroundContainBelow", z)
+        disableMiBackgroundContainBelow.invoke(this, z)
     }
 
     fun View.addMiBackgroundBlendColor(i: Int, i2: Int) {
-        HiddenApiBypass.invoke(View::class.java, this, "addMiBackgroundBlendColor", i, i2)
+        addMiBackgroundBlendColor(this, i, i2)
+    }
+
+    fun View.clearMiBackgroundBlendColor() {
+        clearMiBackgroundBlendColor.invoke(this)
+    }
+
+    fun View.setBackgroundBlurScaleRatio(ratio: Float) {
+        setMiBackgroundBlurScaleRatio.invoke(this, ratio)
+    }
+
+    fun supportBackgroundBlur() : Boolean {
+        return isBackgroundBlurSupported
     }
 
     fun View.setMiBackgroundBlendColors(iArr: IntArray, f: Float) {
@@ -51,10 +98,6 @@ object MiBlurUtils {
             val i5 = iArr[i2 + 1]
             this.addMiBackgroundBlendColor(i3, i5)
         }
-    }
-
-    fun View.clearMiBackgroundBlendColor() {
-        HiddenApiBypass.invoke(View::class.java, this, "clearMiBackgroundBlendColor")
     }
 
     fun View.setBlurRoundRect(i: Int, i2: Int, i3: Int, i4: Int, i5: Int) {

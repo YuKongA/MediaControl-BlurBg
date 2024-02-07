@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-    namespace = "top.yukonga.MediaControlBlur"
+    namespace = "top.yukonga.mediaControlBlur"
     compileSdk = 34
 
     defaultConfig {
         applicationId = namespace
-        minSdk = 33
+        minSdk = 34
         targetSdk = 34
-        versionCode = 1001
-        versionName = "1.0.1"
+        versionCode = 2000
+        versionName = "2.0.0"
     }
 
     buildTypes {
@@ -50,9 +50,15 @@ android {
             }
         }
     }
+
+    androidResources {
+        additionalParameters += arrayOf("--allow-reserved-package-id", "--package-id", "0x62")
+    }
 }
 
 dependencies {
     compileOnly(libs.xposed)
+    implementation(libs.coreKtx)
     implementation(libs.ezXHelper)
+    implementation(libs.hiddenapibypass)
 }

@@ -50,13 +50,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val zenModeView = loadClassOrNull("com.android.systemui.statusbar.notification.zen.ZenModeView")
                     val mediaControlPanel = loadClassOrNull("com.android.systemui.media.controls.ui.MediaControlPanel")
-                    val miBlurCompat = loadClassOrNull("com.miui.systemui.util.MiBlurCompat")
-
-                    miBlurCompat?.methodFinder()?.filterByName("setMiBackgroundBlendColors")?.first()?.createHook {
-                        before {
-                            it.args[2] = ALPHA
-                        }
-                    }
 
                     mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createHook {
                         after {

@@ -4,28 +4,34 @@ import android.graphics.Outline
 import android.util.Log
 import android.view.View
 import android.view.ViewOutlineProvider
-import top.yukonga.mediaControlBlur.utils.AppUtils.getProp
+import top.yukonga.mediaControlBlur.utils.AppUtils.getBooleanProp
 
 object MiBlurUtils {
 
     private val setMiViewBlurMode by lazy {
         View::class.java.getDeclaredMethod("setMiViewBlurMode", Integer.TYPE)
     }
+
     private val setMiBackgroundBlurMode by lazy {
         View::class.java.getDeclaredMethod("setMiBackgroundBlurMode", Integer.TYPE)
     }
+
     private val setPassWindowBlurEnabled by lazy {
         View::class.java.getDeclaredMethod("setPassWindowBlurEnabled", java.lang.Boolean.TYPE)
     }
+
     private val setMiBackgroundBlurRadius by lazy {
         View::class.java.getDeclaredMethod("setMiBackgroundBlurRadius", Integer.TYPE)
     }
+
     private val addMiBackgroundBlendColor by lazy {
         View::class.java.getDeclaredMethod("addMiBackgroundBlendColor", Integer.TYPE, Integer.TYPE)
     }
+
     private val setMiBackgroundBlurScaleRatio by lazy {
         View::class.java.getDeclaredMethod("setMiBackgroundBlurScaleRatio", java.lang.Float.TYPE)
     }
+
     private val clearMiBackgroundBlendColor by lazy {
         View::class.java.getDeclaredMethod("clearMiBackgroundBlendColor")
     }
@@ -35,12 +41,7 @@ object MiBlurUtils {
     }
 
     private val isBackgroundBlurSupported by lazy {
-        try {
-            getProp("persist.sys.background_blur_supported").toBoolean()
-        }
-        catch (e: Exception) {
-            false
-        }
+        getBooleanProp("persist.sys.background_blur_supported")
     }
 
     fun View.setMiBackgroundBlurMode(mode: Int) {
@@ -79,7 +80,7 @@ object MiBlurUtils {
         setMiBackgroundBlurScaleRatio.invoke(this, ratio)
     }
 
-    fun supportBackgroundBlur() : Boolean {
+    fun supportBackgroundBlur(): Boolean {
         return isBackgroundBlurSupported
     }
 

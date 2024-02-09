@@ -44,27 +44,28 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 try {
                     if (!supportBackgroundBlur()) return
 
-                    val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
-                    val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
-                    val miuiExpandableNotificationRow = loadClassOrNull("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow")
-                    val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
-                    val zenModeView = loadClassOrNull("com.android.systemui.statusbar.notification.zen.ZenModeView")
                     val mediaControlPanel = loadClassOrNull("com.android.systemui.media.controls.ui.MediaControlPanel")
+                    val miuiExpandableNotificationRow = loadClassOrNull("com.android.systemui.statusbar.notification.row.MiuiExpandableNotificationRow")
+                    val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
+                    val modalDialog = loadClassOrNull("com.android.systemui.statusbar.notification.modal.ModalDialog")
+                    val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
+                    val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
+                    val zenModeView = loadClassOrNull("com.android.systemui.statusbar.notification.zen.ZenModeView")
 
                     mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createHook {
                         after {
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@after
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@after
 
                             val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
                             val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
 
                             val intArray = if (isDarkMode(context)) {
-                                moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_night)
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
                             } else {
-                                moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_light)
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
                             }
                             mediaBg.apply {
                                 setMiViewBlurMode(1)
@@ -78,7 +79,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         after {
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
 
                             val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
                             val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
@@ -95,7 +96,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
                             val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
 
-                            if (isBackgroundBlurOpened == false) {
+                            if (!isBackgroundBlurOpened) {
                                 titleText?.setTextColor(Color.WHITE)
                                 seamlessIcon?.setColorFilter(Color.WHITE)
                                 action0?.setColorFilter(Color.WHITE)
@@ -132,9 +133,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 }
 
                                 val intArray = if (isDarkMode(context)) {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_night)
+                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
                                 } else {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_light)
+                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
                                 }
 
                                 mediaBg.apply {
@@ -144,50 +145,37 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         }
                     }
 
+                    // Notification 高级材质2.0
                     miuiExpandableNotificationRow?.methodFinder()?.filterByName("updateBlurBg")?.first()?.createHook {
                         after {
                             val context = AndroidAppHelper.currentApplication().applicationContext
+                            val z = it.args[2] as Boolean
+                            val i = it.args[0] as Int
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            val mBackgroundNormal = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mBackgroundNormal")
+                            if (z && isBackgroundBlurOpened) {
+                                XposedHelpers.callMethod(mBackgroundNormal, "setCustomBackground", i)
+                                var z3 = true
 
-                            if (!(it.args[2] as Boolean)) return@after
-
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@after
-
-                            val isHeadsUpState = it.thisObject.objectHelper().invokeMethodBestMatch("isHeadsUpState") as Boolean
-                            val mStatusBarStateController = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mStatusBarStateController")
-                            val getState = mStatusBarStateController?.objectHelper()?.invokeMethodBestMatch("getState")
-
-                            val z = mStatusBarStateController != null && getState == 1
-
-                            val intArray = if (isHeadsUpState) {
-                                if (isDarkMode(context)) {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_headsUp_colors_night)
+                                val intArray = if (isDarkMode(context)) {
+                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
                                 } else {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_headsUp_colors_light)
+                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
                                 }
-                            } else {
-                                if (z) {
-                                    if (isDarkMode(context)) {
-                                        moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
-                                    } else {
-                                        moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
-                                    }
-                                } else {
-                                    if (isDarkMode(context)) {
-                                        moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_night)
-                                    } else {
-                                        moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_light)
-                                    }
-                                }
+
+                                val mExpandedParamsUpdating = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mExpandedParamsUpdating") as Boolean
+                                val getViewState = it.thisObject.objectHelper().invokeMethodBestMatch("getViewState")
+                                val animatingMiniWindowEnter =
+                                    getViewState?.objectHelper()?.getObjectOrNullUntilSuperclass("animatingMiniWindowEnter") as Boolean
+
+                                if (!mExpandedParamsUpdating && !animatingMiniWindowEnter) z3 = false
+                                XposedHelpers.callStaticMethod(notificationUtil, "applyElementViewBlend", context, mBackgroundNormal, intArray, z3)
+
                             }
-
-                            val mBackgroundNormal = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mBackgroundNormal") ?: return@after
-                            XposedHelpers.callStaticMethod(notificationUtil, "applyElementViewBlend", context, mBackgroundNormal, intArray, z)
                         }
                     }
 
-
-                    // 勿扰模式 高级材质2.0
+                    // zenMode 高级材质2.0
                     zenModeView?.methodFinder()?.filterByName("updateBackgroundBg")?.first()?.createHook {
                         after {
 
@@ -195,27 +183,35 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@after
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@after
 
-                            val mController = it.thisObject.objectHelper().getObjectOrNull("mController")
-                            val statusBarStateController = mController?.objectHelper()?.getObjectOrNull("statusBarStateController")
-                            val mState = statusBarStateController?.objectHelper()?.getObjectOrNull("mState") as Int
-
-                            val intArray = if (mState == 2) {
-                                if (isDarkMode(context)) {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
-                                } else {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
-                                }
+                            val intArray = if (isDarkMode(context)) {
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
                             } else {
-                                if (isDarkMode(context)) {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_night)
-                                } else {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_shade_colors_light)
-                                }
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
                             }
+
                             XposedHelpers.callStaticMethod(notificationUtil, "applyElementViewBlend", context, mRealContent, intArray, true)
+                        }
+                    }
+
+                    // modalDialog 高级材质2.0
+                    modalDialog?.constructors?.first()?.createHook {
+                        after {
+                            val context = AndroidAppHelper.currentApplication().applicationContext
+
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@after
+
+                            val mView = it.thisObject.objectHelper().getObjectOrNull("mView") ?: return@after
+
+                            val intArray = if (isDarkMode(context)) {
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_night)
+                            } else {
+                                moduleRes.getIntArray(R.array.notification_element_blend_keyguard_colors_light)
+                            }
+                            XposedHelpers.callStaticMethod(notificationUtil, "applyElementViewBlend", context, mView, intArray, false)
                         }
                     }
 
@@ -224,8 +220,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         before {
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@before
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@before
 
                             it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
                             it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
@@ -244,8 +240,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         before {
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@before
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@before
 
                             val mediaBg = it.thisObject as ImageView
                             mediaBg.background = null
@@ -259,8 +255,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         before {
                             val context = AndroidAppHelper.currentApplication().applicationContext
 
-                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context)
-                            if (isBackgroundBlurOpened == false) return@before
+                            val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                            if (!isBackgroundBlurOpened) return@before
 
                             it.result = null
                         }

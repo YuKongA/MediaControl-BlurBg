@@ -2,6 +2,7 @@ package top.yukonga.mediaControlBlur.utils
 
 import android.content.Context
 import android.content.res.Configuration
+import android.content.res.Resources.getSystem
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.os.Environment
@@ -17,6 +18,17 @@ object AppUtils {
     fun colorFilterCompat(colorInt: Int) = BlendModeColorFilter(colorInt, BlendMode.SRC_IN)
 
     fun isDarkMode(context: Context): Boolean = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+
+    fun getAlpha(context: Context): Float {
+        return when {
+            isDarkMode(context) -> 0.8f
+            else -> 1f
+        }
+    }
+
+    val Int.dp: Int get() = (this.toFloat().dp).toInt()
+
+    val Float.dp: Float get() = this / getSystem().displayMetrics.density
 
     fun getBooleanProp(name: String): Boolean {
         getProp(name).let { prop ->

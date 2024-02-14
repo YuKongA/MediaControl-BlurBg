@@ -15,16 +15,9 @@ import java.util.Properties
 
 object AppUtils {
 
-    fun colorFilterCompat(colorInt: Int) = BlendModeColorFilter(colorInt, BlendMode.SRC_IN)
+    fun colorFilter(colorInt: Int) = BlendModeColorFilter(colorInt, BlendMode.SRC_IN)
 
     fun isDarkMode(context: Context): Boolean = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-
-    fun getAlpha(context: Context): Float {
-        return when {
-            isDarkMode(context) -> 0.8f
-            else -> 1f
-        }
-    }
 
     val Int.dp: Int get() = (this.toFloat().dp).toInt()
 

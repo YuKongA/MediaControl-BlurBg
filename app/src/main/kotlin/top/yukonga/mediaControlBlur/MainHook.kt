@@ -60,13 +60,18 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
                             val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
 
-                            val intArray = if (isDarkMode(context)) {
-                                moduleRes.getIntArray(R.array.notification_element_blend_colors_night)
-                            } else {
-                                moduleRes.getIntArray(R.array.notification_element_blend_colors_light)
+                            val resources = context.resources
+                            val intArray = try {
+                                val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", lpparam.packageName)
+                                resources.getIntArray(arrayId)
+                            } catch (_: Exception) {
+                                val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", lpparam.packageName)
+                                resources.getIntArray(arrayId)
+                            } catch (e: Exception) {
+                                Log.ex("notification element blend colors not found!")
+                                return@after
                             }
 
-                            val resources = context.resources
                             val dimenId = resources.getIdentifier("notification_item_bg_radius", "dimen", lpparam.packageName)
                             val radius = resources.getDimensionPixelSize(dimenId)
 
@@ -85,8 +90,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
 
                             val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@after
-                            val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
 
+                            val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@after
                             val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
                             val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
                             val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
@@ -144,13 +149,19 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     totalTimeView?.setTextColor(grey)
                                 }
 
-                                val intArray = if (isDarkMode(context)) {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_colors_night)
-                                } else {
-                                    moduleRes.getIntArray(R.array.notification_element_blend_colors_light)
+                                val resources = context.resources
+                                val intArray = try {
+                                    val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", lpparam.packageName)
+                                    resources.getIntArray(arrayId)
+                                } catch (_: Exception) {
+                                    val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", lpparam.packageName)
+                                    resources.getIntArray(arrayId)
+                                } catch (e: Exception) {
+                                    Log.ex("notification element blend colors not found!")
+                                    return@after
                                 }
-
                                 mediaBg.setMiBackgroundBlendColors(intArray, ALPHA)
+
                             }
                         }
                     }
@@ -166,10 +177,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
                             it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
                             it.thisObject.objectHelper().setObject("mRadius", 0f)
-                            it.thisObject.objectHelper().setObject("c1x", 0f)
-                            it.thisObject.objectHelper().setObject("c1y", 0f)
-                            it.thisObject.objectHelper().setObject("c2x", 0f)
-                            it.thisObject.objectHelper().setObject("c2y", 0f)
 
                             it.result = null
                         }

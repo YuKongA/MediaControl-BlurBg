@@ -6,20 +6,4 @@
         <item>com.android.systemui</item>
     </string-array>
 
-    <!-- Notification element blend colors -->
-    <!-- Light -->
-    <array name="notification_element_blend_colors_light">
-        <item>#818181</item>
-        <item>107</item>
-        <item>#b3ff00</item>
-        <item>106</item>
-    </array>
-
-    <!-- Night -->
-    <array name="notification_element_blend_colors_night">
-        <item>#80474747</item>
-        <item>107</item>
-        <item>#0fcc00</item>
-        <item>106</item>
-    </array>
 </resources>

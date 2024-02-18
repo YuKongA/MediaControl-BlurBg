@@ -9,17 +9,17 @@
     <!-- Notification element blend colors -->
     <!-- Light -->
     <array name="notification_element_blend_colors_light">
-        <item>#919191</item>
+        <item>#818181</item>
         <item>107</item>
-        <item>#bdfa00</item>
+        <item>#b3ff00</item>
         <item>106</item>
     </array>
 
     <!-- Night -->
     <array name="notification_element_blend_colors_night">
-        <item>#777777</item>
+        <item>#80474747</item>
         <item>107</item>
-        <item>#265900</item>
+        <item>#0fcc00</item>
         <item>106</item>
     </array>
 </resources>

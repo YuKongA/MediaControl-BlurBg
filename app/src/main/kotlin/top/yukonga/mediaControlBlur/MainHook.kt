@@ -20,7 +20,6 @@ import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import top.yukonga.mediaControlBlur.utils.AppUtils.colorFilter
-import top.yukonga.mediaControlBlur.utils.AppUtils.dp
 import top.yukonga.mediaControlBlur.utils.AppUtils.isDarkMode
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setBlurRoundRect
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendColors
@@ -68,12 +67,12 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             }
 
                             val resources = context.resources
-                            val dimenId = resources.getIdentifier("notification_heads_up_shadow_radius", "dimen", lpparam.packageName)
+                            val dimenId = resources.getIdentifier("notification_item_bg_radius", "dimen", lpparam.packageName)
                             val radius = resources.getDimensionPixelSize(dimenId)
 
                             mediaBg.apply {
                                 setMiViewBlurMode(1)
-                                setBlurRoundRect(radius.dp)
+                                setBlurRoundRect(radius)
                                 setMiBackgroundBlendColors(intArray, ALPHA)
                             }
                         }

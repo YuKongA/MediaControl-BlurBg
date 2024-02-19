@@ -12,6 +12,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -112,6 +113,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
                             val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
                             val albumView = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("albumView")
+                            val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
 
                             val grey = if (isDarkMode(context)) {
                                 moduleRes.getColor(R.color.mediacontrol_artist_text_color_dark, null)
@@ -195,6 +197,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 canvas1.drawBitmap(artworkBitmap, rect, rect, paint)
 
                                 albumView?.setImageDrawable(BitmapDrawable(context.resources, output))
+
+                                appIcon?.parent?.let { viewParent ->
+                                    (viewParent as ViewGroup).removeView(appIcon)
+                                }
                             }
                         }
                     }

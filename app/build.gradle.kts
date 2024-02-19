@@ -14,8 +14,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 34
-        versionCode = 2120
-        versionName = "2.1.2"
+        versionCode = 2125
+        versionName = "2.1.25"
     }
 
     buildTypes {

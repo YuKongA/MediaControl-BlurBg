@@ -2,8 +2,16 @@ package top.yukonga.mediaControlBlur
 
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Icon
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -103,6 +111,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val seekBar = mMediaViewHolder.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
                             val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
                             val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
+                            val albumView = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("albumView")
 
                             val grey = if (isDarkMode(context)) {
                                 moduleRes.getColor(R.color.mediacontrol_artist_text_color_dark, null)
@@ -162,6 +171,30 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 }
                                 mediaBg.setMiBackgroundBlendColors(intArray, ALPHA)
 
+                                val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@after
+                                val artworkLayer = artwork.loadDrawable(context) ?: return@after
+                                val artworkBitmap = Bitmap.createBitmap(artworkLayer.intrinsicWidth, artworkLayer.intrinsicHeight, Bitmap.Config.ARGB_8888)
+                                val canvas = Canvas(artworkBitmap)
+                                artworkLayer.setBounds(0, 0, artworkLayer.intrinsicWidth, artworkLayer.intrinsicHeight)
+                                artworkLayer.draw(canvas)
+
+                                val radius = 45f
+                                val output = Bitmap.createBitmap(artworkBitmap.width, artworkBitmap.height, Bitmap.Config.ARGB_8888)
+                                val canvas1 = Canvas(output)
+
+                                val paint = Paint()
+                                val rect = Rect(0, 0, artworkBitmap.width, artworkBitmap.height)
+                                val rectF = RectF(rect)
+
+                                paint.isAntiAlias = true
+                                canvas1.drawARGB(0, 0, 0, 0)
+                                paint.color = Color.BLACK
+                                canvas1.drawRoundRect(rectF, radius, radius, paint)
+
+                                paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+                                canvas1.drawBitmap(artworkBitmap, rect, rect, paint)
+
+                                albumView?.setImageDrawable(BitmapDrawable(context.resources, output))
                             }
                         }
                     }

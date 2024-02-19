@@ -167,7 +167,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 } catch (_: Exception) {
                                     val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", lpparam.packageName)
                                     resources.getIntArray(arrayId)
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     Log.ex("notification element blend colors not found!")
                                     return@after
                                 }
@@ -179,13 +179,14 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 val canvas = Canvas(artworkBitmap)
                                 artworkLayer.setBounds(0, 0, artworkLayer.intrinsicWidth, artworkLayer.intrinsicHeight)
                                 artworkLayer.draw(canvas)
+                                val resizedBitmap = Bitmap.createScaledBitmap(artworkBitmap, 300, 300, true)
 
                                 val radius = 45f
-                                val output = Bitmap.createBitmap(artworkBitmap.width, artworkBitmap.height, Bitmap.Config.ARGB_8888)
-                                val canvas1 = Canvas(output)
+                                val newBitmap = Bitmap.createBitmap(resizedBitmap.width, resizedBitmap.height, Bitmap.Config.ARGB_8888)
+                                val canvas1 = Canvas(newBitmap)
 
                                 val paint = Paint()
-                                val rect = Rect(0, 0, artworkBitmap.width, artworkBitmap.height)
+                                val rect = Rect(0, 0, resizedBitmap.width, resizedBitmap.height)
                                 val rectF = RectF(rect)
 
                                 paint.isAntiAlias = true
@@ -194,9 +195,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 canvas1.drawRoundRect(rectF, radius, radius, paint)
 
                                 paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
-                                canvas1.drawBitmap(artworkBitmap, rect, rect, paint)
+                                canvas1.drawBitmap(resizedBitmap, rect, rect, paint)
 
-                                albumView?.setImageDrawable(BitmapDrawable(context.resources, output))
+                                albumView?.setImageDrawable(BitmapDrawable(context.resources, newBitmap))
 
                                 appIcon?.parent?.let { viewParent ->
                                     (viewParent as ViewGroup).removeView(appIcon)

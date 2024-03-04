@@ -1,22 +1,16 @@
-@file:Suppress("UnstableApiUsage")
-
 pluginManagement {
     repositories {
-        google()
-        mavenCentral()
         gradlePluginPortal()
-        maven("https://api.xposed.info/")
-    }
-}
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
         google()
         mavenCentral()
-        maven("https://api.xposed.info/")
     }
 }
-
+plugins {
+    id("com.highcapable.sweetdependency") version "1.0.4"
+    id("com.highcapable.sweetproperty") version "1.0.5"
+}
+sweetProperty {
+    rootProject { all { isEnable = false } }
+}
 rootProject.name = "MediaControlBlur"
 include(":app")

@@ -132,5 +132,4 @@ object MiBlurUtils {
         setMiBackgroundBlurRadius(0)
         setPassWindowBlurEnabled(false)
     }
-
 }

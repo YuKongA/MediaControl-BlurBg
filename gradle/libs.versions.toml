@@ -1,5 +1,5 @@
 [versions]
-agp = "8.2.2"
+agp = "8.3.0"
 ezXHelper = "2.0.9"
 kotlin = "1.9.22"
 xposed = "82"

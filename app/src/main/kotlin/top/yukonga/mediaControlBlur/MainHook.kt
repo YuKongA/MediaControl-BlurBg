@@ -19,13 +19,11 @@ import android.widget.SeekBar
 import android.widget.TextView
 import com.github.kyuubiran.ezxhelper.ClassUtils.loadClassOrNull
 import com.github.kyuubiran.ezxhelper.EzXHelper
-import com.github.kyuubiran.ezxhelper.EzXHelper.moduleRes
 import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
 import com.github.kyuubiran.ezxhelper.Log
 import com.github.kyuubiran.ezxhelper.ObjectHelper.Companion.objectHelper
 import com.github.kyuubiran.ezxhelper.finders.MethodFinder.`-Static`.methodFinder
 import de.robv.android.xposed.IXposedHookLoadPackage
-import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import top.yukonga.mediaControlBlur.utils.AppUtils.colorFilter
@@ -38,11 +36,7 @@ import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.supportBackgroundBlur
 private const val TAG = "MediaControlBlur"
 private const val ALPHA = 1f
 
-class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
-
-    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        EzXHelper.initZygote(startupParam)
-    }
+class MainHook : IXposedHookLoadPackage {
 
     @SuppressLint("DiscouragedApi")
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -115,11 +109,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             val albumView = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("albumView")
                             val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
 
-                            val grey = if (isDarkMode(context)) {
-                                moduleRes.getColor(R.color.mediacontrol_artist_text_color_dark, null)
-                            } else {
-                                moduleRes.getColor(R.color.mediacontrol_artist_text_color_light, null)
-                            }
+                            val grey = if (isDarkMode(context)) Color.parseColor("#80ffffff") else Color.parseColor("#99000000")
 
                             if (!isBackgroundBlurOpened) {
                                 titleText?.setTextColor(Color.WHITE)
@@ -248,8 +238,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             it.result = null
                         }
                     }
-
-
                 } catch (t: Throwable) {
                     Log.ex(t)
                 }

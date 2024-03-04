@@ -14,8 +14,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 34
-        versionCode = 2127
-        versionName = "2.1.27"
+        versionCode = 2128
+        versionName = "2.1.28"
     }
 
     buildTypes {
@@ -49,10 +49,6 @@ android {
                 (this as BaseVariantOutputImpl).outputFileName = "MediaControlBlur-$versionName.apk"
             }
         }
-    }
-
-    androidResources {
-        additionalParameters += arrayOf("--allow-reserved-package-id", "--package-id", "0x62")
     }
 }
 

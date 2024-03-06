@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- Xposed scope -->
     <string-array name="xposed_scope">
         <item>com.android.systemui</item>
     </string-array>
-
 </resources>

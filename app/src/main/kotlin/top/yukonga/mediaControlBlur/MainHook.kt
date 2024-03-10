@@ -2,6 +2,7 @@ package top.yukonga.mediaControlBlur
 
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -56,25 +57,10 @@ class MainHook : IXposedHookLoadPackage {
                         val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@createAfterHook
                         val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@createAfterHook
 
-                        val resources = context.resources
-                        val intArray = try {
-                            val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", lpparam.packageName)
-                            resources.getIntArray(arrayId)
-                        } catch (_: Exception) {
-                            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", lpparam.packageName)
-                            resources.getIntArray(arrayId)
-                        } catch (e: Exception) {
-                            Log.ex("notification element blend colors not found!")
-                            return@createAfterHook
-                        }
-
-                        val dimenId = resources.getIdentifier("notification_item_bg_radius", "dimen", lpparam.packageName)
-                        val radius = resources.getDimensionPixelSize(dimenId)
-
                         mediaBg.apply {
                             setMiViewBlurMode(1)
-                            setBlurRoundRect(radius)
-                            setMiBackgroundBlendColors(intArray, 1f)
+                            setBlurRoundRect(getNotificationElementRoundRect(context))
+                            setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
                         }
                     }
 
@@ -141,18 +127,7 @@ class MainHook : IXposedHookLoadPackage {
                                 totalTimeView?.setTextColor(grey)
                             }
 
-                            val resources = context.resources
-                            val intArray = try {
-                                val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", lpparam.packageName)
-                                resources.getIntArray(arrayId)
-                            } catch (_: Exception) {
-                                val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", lpparam.packageName)
-                                resources.getIntArray(arrayId)
-                            } catch (_: Exception) {
-                                Log.ex("notification element blend colors not found!")
-                                return@createAfterHook
-                            }
-                            mediaBg.setMiBackgroundBlendColors(intArray, 1f)
+                            mediaBg.setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
 
                             val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@createAfterHook
                             val artworkLayer = artwork.loadDrawable(context) ?: return@createAfterHook
@@ -180,9 +155,7 @@ class MainHook : IXposedHookLoadPackage {
 
                             albumView?.setImageDrawable(BitmapDrawable(context.resources, newBitmap))
 
-                            appIcon?.parent?.let { viewParent ->
-                                (viewParent as ViewGroup).removeView(appIcon)
-                            }
+                            (appIcon?.parent as ViewGroup).removeView(appIcon)
                         }
                     }
 
@@ -212,5 +185,25 @@ class MainHook : IXposedHookLoadPackage {
 
             else -> return
         }
+    }
+
+
+    @SuppressLint("DiscouragedApi")
+    fun getNotificationElementBlendColors(context: Context): IntArray {
+        val resources = context.resources
+        return try {
+            val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
+            resources.getIntArray(arrayId)
+        } catch (_: Exception) {
+            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
+            resources.getIntArray(arrayId)
+        }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    fun getNotificationElementRoundRect(context: Context): Int {
+        val resources = context.resources
+        val dimenId = resources.getIdentifier("notification_item_bg_radius", "dimen", "com.android.systemui")
+        return resources.getDimensionPixelSize(dimenId)
     }
 }

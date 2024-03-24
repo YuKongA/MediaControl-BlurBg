@@ -13,6 +13,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
+import android.graphics.drawable.ShapeDrawable
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -29,6 +30,7 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import top.yukonga.mediaControlBlur.utils.AppUtils.colorFilter
+import top.yukonga.mediaControlBlur.utils.AppUtils.dp
 import top.yukonga.mediaControlBlur.utils.AppUtils.isDarkMode
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setBlurRoundRect
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendColors
@@ -47,6 +49,17 @@ class MainHook : IXposedHookLoadPackage {
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
+                    val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
+
+                    seekBarObserver?.constructors?.first()?.createAfterHook {
+                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 80.dp)
+                        it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")?.apply {
+                            thumb = ShapeDrawable().apply {
+                                intrinsicWidth = 80.dp
+                                intrinsicHeight = 80.dp
+                            }
+                        }
+                    }
 
                     mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createAfterHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
@@ -109,7 +122,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action3?.setColorFilter(Color.BLACK)
                                 action4?.setColorFilter(Color.BLACK)
                                 seekBar?.progressDrawable?.colorFilter = colorFilter(Color.BLACK)
-                                seekBar?.thumb?.colorFilter = colorFilter(Color.BLACK)
+                                seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                                 elapsedTimeView?.setTextColor(grey)
                                 totalTimeView?.setTextColor(grey)
                             } else {
@@ -122,7 +135,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action3?.setColorFilter(Color.WHITE)
                                 action4?.setColorFilter(Color.WHITE)
                                 seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
-                                seekBar?.thumb?.colorFilter = colorFilter(Color.WHITE)
+                                seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                                 elapsedTimeView?.setTextColor(grey)
                                 totalTimeView?.setTextColor(grey)
                             }
@@ -155,7 +168,7 @@ class MainHook : IXposedHookLoadPackage {
 
                             albumView?.setImageDrawable(BitmapDrawable(context.resources, newBitmap))
 
-                            (appIcon?.parent as ViewGroup).removeView(appIcon)
+                            (appIcon?.parent as ViewGroup?)?.removeView(appIcon)
                         }
                     }
 

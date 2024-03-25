@@ -14,6 +14,7 @@ import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.ShapeDrawable
+import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -52,11 +53,12 @@ class MainHook : IXposedHookLoadPackage {
                     val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
 
                     seekBarObserver?.constructors?.first()?.createAfterHook {
-                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 80.dp)
-                        it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")?.apply {
+                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 75.dp)
+                        val seekBar = it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
+                        seekBar?.apply {
                             thumb = ShapeDrawable().apply {
-                                intrinsicWidth = 80.dp
-                                intrinsicHeight = 80.dp
+                                intrinsicWidth = 75.dp
+                                intrinsicHeight = 75.dp
                             }
                         }
                     }
@@ -121,7 +123,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action2?.setColorFilter(Color.BLACK)
                                 action3?.setColorFilter(Color.BLACK)
                                 action4?.setColorFilter(Color.BLACK)
-                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.BLACK)
+                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 0, 0, 0))
                                 seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                                 elapsedTimeView?.setTextColor(grey)
                                 totalTimeView?.setTextColor(grey)
@@ -134,7 +136,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action2?.setColorFilter(Color.WHITE)
                                 action3?.setColorFilter(Color.WHITE)
                                 action4?.setColorFilter(Color.WHITE)
-                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
+                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 255, 255, 255))
                                 seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                                 elapsedTimeView?.setTextColor(grey)
                                 totalTimeView?.setTextColor(grey)
@@ -169,6 +171,9 @@ class MainHook : IXposedHookLoadPackage {
                             albumView?.setImageDrawable(BitmapDrawable(context.resources, newBitmap))
 
                             (appIcon?.parent as ViewGroup?)?.removeView(appIcon)
+
+                            elapsedTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
+                            totalTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
                         }
                     }
 

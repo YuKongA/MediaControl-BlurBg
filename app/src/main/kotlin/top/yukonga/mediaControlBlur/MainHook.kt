@@ -53,12 +53,12 @@ class MainHook : IXposedHookLoadPackage {
                     val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
 
                     seekBarObserver?.constructors?.first()?.createAfterHook {
-                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 75.dp)
+                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 8.dp)
                         val seekBar = it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
                         seekBar?.apply {
                             thumb = ShapeDrawable().apply {
-                                intrinsicWidth = 75.dp
-                                intrinsicHeight = 75.dp
+                                intrinsicWidth = 8.dp
+                                intrinsicHeight = 8.dp
                             }
                         }
                     }

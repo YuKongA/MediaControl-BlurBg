@@ -6,6 +6,9 @@ import android.view.View
 import android.view.ViewOutlineProvider
 
 object MiBlurUtils {
+    const val BACKGROUND = 1
+    const val FOREGROUND = 2
+
     private val setMiViewBlurMode by lazy {
         View::class.java.getDeclaredMethod("setMiViewBlurMode", Integer.TYPE)
     }

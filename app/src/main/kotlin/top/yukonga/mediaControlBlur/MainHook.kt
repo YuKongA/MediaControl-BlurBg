@@ -33,6 +33,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import top.yukonga.mediaControlBlur.utils.AppUtils.colorFilter
 import top.yukonga.mediaControlBlur.utils.AppUtils.dp
 import top.yukonga.mediaControlBlur.utils.AppUtils.isDarkMode
+import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.BACKGROUND
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setBlurRoundRect
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendColors
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiViewBlurMode
@@ -46,7 +47,6 @@ class MainHook : IXposedHookLoadPackage {
         when (lpparam.packageName) {
             "com.android.systemui" -> {
                 try {
-                    val mediaControlPanel = loadClassOrNull("com.android.systemui.media.controls.ui.MediaControlPanel")
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
@@ -63,22 +63,6 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     }
 
-                    mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createAfterHook {
-                        val context = AndroidAppHelper.currentApplication().applicationContext
-
-                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
-                        if (!isBackgroundBlurOpened) return@createAfterHook
-
-                        val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@createAfterHook
-                        val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@createAfterHook
-
-                        mediaBg.apply {
-                            setMiViewBlurMode(1)
-                            setBlurRoundRect(getNotificationElementRoundRect(context))
-                            setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
-                        }
-                    }
-
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createAfterHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
@@ -86,7 +70,6 @@ class MainHook : IXposedHookLoadPackage {
 
                         val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@createAfterHook
 
-                        val mediaBg = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("mediaBg") ?: return@createAfterHook
                         val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
                         val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
                         val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
@@ -114,9 +97,12 @@ class MainHook : IXposedHookLoadPackage {
                             seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
                             seekBar?.thumb?.colorFilter = colorFilter(Color.WHITE)
                         } else {
+                            seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
+                            artistText?.setTextColor(grey)
+                            elapsedTimeView?.setTextColor(grey)
+                            totalTimeView?.setTextColor(grey)
                             if (!isDarkMode(context)) {
                                 titleText?.setTextColor(Color.BLACK)
-                                artistText?.setTextColor(grey)
                                 seamlessIcon?.setColorFilter(Color.BLACK)
                                 action0?.setColorFilter(Color.BLACK)
                                 action1?.setColorFilter(Color.BLACK)
@@ -124,12 +110,8 @@ class MainHook : IXposedHookLoadPackage {
                                 action3?.setColorFilter(Color.BLACK)
                                 action4?.setColorFilter(Color.BLACK)
                                 seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 0, 0, 0))
-                                seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
-                                elapsedTimeView?.setTextColor(grey)
-                                totalTimeView?.setTextColor(grey)
                             } else {
                                 titleText?.setTextColor(Color.WHITE)
-                                artistText?.setTextColor(grey)
                                 seamlessIcon?.setColorFilter(Color.WHITE)
                                 action0?.setColorFilter(Color.WHITE)
                                 action1?.setColorFilter(Color.WHITE)
@@ -137,12 +119,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action3?.setColorFilter(Color.WHITE)
                                 action4?.setColorFilter(Color.WHITE)
                                 seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 255, 255, 255))
-                                seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
-                                elapsedTimeView?.setTextColor(grey)
-                                totalTimeView?.setTextColor(grey)
                             }
-
-                            mediaBg.setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
 
                             val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@createAfterHook
                             val artworkLayer = artwork.loadDrawable(context) ?: return@createAfterHook
@@ -186,6 +163,12 @@ class MainHook : IXposedHookLoadPackage {
                         it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
                         it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
                         it.thisObject.objectHelper().setObject("mRadius", 0f)
+
+                        (it.thisObject as ImageView).apply {
+                            setMiViewBlurMode(BACKGROUND)
+                            setBlurRoundRect(getNotificationElementRoundRect(context))
+                            setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
+                        }
                     }
 
                     playerTwoCircleView?.methodFinder()?.filterByName("setBackground")?.first()?.createBeforeHook {

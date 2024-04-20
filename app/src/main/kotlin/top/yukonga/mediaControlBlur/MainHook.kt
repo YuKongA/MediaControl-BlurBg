@@ -3,6 +3,7 @@ package top.yukonga.mediaControlBlur
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -154,20 +155,20 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     }
 
-                    playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook {
+                    playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook { hookParam ->
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
                         val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
                         if (!isBackgroundBlurOpened) return@createBeforeHook
 
-                        it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
-                        it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
-                        it.thisObject.objectHelper().setObject("mRadius", 0f)
+                        hookParam.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
+                        hookParam.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
+                        hookParam.thisObject.objectHelper().setObject("mRadius", 0f)
 
-                        (it.thisObject as ImageView).apply {
+                        (hookParam.thisObject as ImageView).apply {
                             setMiViewBlurMode(BACKGROUND)
                             setBlurRoundRect(getNotificationElementRoundRect(context))
-                            setMiBackgroundBlendColors(getNotificationElementBlendColors(context), 1f)
+                            getNotificationElementBlendColors(context)?.let { setMiBackgroundBlendColors(it, 1f) }
                         }
                     }
 
@@ -190,15 +191,52 @@ class MainHook : IXposedHookLoadPackage {
 
 
     @SuppressLint("DiscouragedApi")
-    fun getNotificationElementBlendColors(context: Context): IntArray {
-        val resources = context.resources
-        return try {
-            val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
-            resources.getIntArray(arrayId)
-        } catch (_: Exception) {
-            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
-            resources.getIntArray(arrayId)
+    private fun getResourceValue(resources: Resources, name: String, type: String, theme: Resources.Theme? = null): Int {
+        val id = resources.getIdentifier(name, type, "com.android.systemui")
+        return when (type) {
+            "color" -> resources.getColor(id, theme)
+            "integer" -> resources.getInteger(id)
+            else -> throw IllegalArgumentException("Unsupported resource type: $type")
         }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    private fun getNotificationElementBlendColors(context: Context): IntArray? {
+        val resources = context.resources
+        val theme = context.theme
+        var arrayInt: IntArray? = null
+        try {
+            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
+            arrayInt = resources.getIntArray(arrayId)
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [1/3]!")
+            return arrayInt
+        } catch (_: Exception) {
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [1/3]!")
+        }
+
+        try {
+            val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
+            arrayInt = resources.getIntArray(arrayId)
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [2/3]!")
+            return arrayInt
+        } catch (_: Exception) {
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [2/3]!")
+        }
+
+        try {
+            val color1 = getResourceValue(resources, "notification_element_blend_shade_color_1", "color", theme)
+            val color2 = getResourceValue(resources, "notification_element_blend_shade_color_2", "color", theme)
+            val integer1 = getResourceValue(resources, "notification_element_blend_shade_mode_1", "integer")
+            val integer2 = getResourceValue(resources, "notification_element_blend_shade_mode_2", "integer")
+            arrayInt = intArrayOf(color1, integer1, color2, integer2)
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [3/3]!")
+            return arrayInt
+        } catch (_: Exception) {
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [3/3]!")
+        }
+
+        Log.ex("Notification element blend colors not found!")
+        return arrayInt
     }
 
     @SuppressLint("DiscouragedApi")

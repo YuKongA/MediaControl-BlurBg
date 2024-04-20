@@ -13,8 +13,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 34
-        versionCode = 2232
-        versionName = "2.2.32"
+        versionCode = 2310
+        versionName = "2.3.1"
     }
     val properties = Properties()
     runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }
@@ -40,6 +40,9 @@ android {
                 enableV4Signing = true
             }
         }
+    }
+    buildFeatures {
+        buildConfig = true
     }
     buildTypes {
         release {

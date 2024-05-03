@@ -13,8 +13,8 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
-import android.graphics.drawable.ShapeDrawable
 import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.ImageButton
@@ -57,9 +57,9 @@ class MainHook : IXposedHookLoadPackage {
                         it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 8.dp)
                         val seekBar = it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
                         seekBar?.apply {
-                            thumb = ShapeDrawable().apply {
-                                intrinsicWidth = 8.dp
-                                intrinsicHeight = 8.dp
+                            thumb = (thumb as Drawable).apply {
+                                setMinimumWidth(8.dp)
+                                setMinimumHeight(8.dp)
                             }
                         }
                     }
@@ -168,7 +168,7 @@ class MainHook : IXposedHookLoadPackage {
                         (hookParam.thisObject as ImageView).apply {
                             setMiViewBlurMode(BACKGROUND)
                             setBlurRoundRect(getNotificationElementRoundRect(context))
-                            getNotificationElementBlendColors(context)?.let { setMiBackgroundBlendColors(it, 1f) }
+                            getNotificationElementBlendShadeColors(context)?.let { setMiBackgroundBlendColors(it, 1f) }
                         }
                     }
 
@@ -201,26 +201,17 @@ class MainHook : IXposedHookLoadPackage {
     }
 
     @SuppressLint("DiscouragedApi")
-    private fun getNotificationElementBlendColors(context: Context): IntArray? {
+    private fun getNotificationElementBlendShadeColors(context: Context): IntArray? {
         val resources = context.resources
         val theme = context.theme
         var arrayInt: IntArray? = null
         try {
-            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
-            arrayInt = resources.getIntArray(arrayId)
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [1/3]!")
-            return arrayInt
-        } catch (_: Exception) {
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [1/3]!")
-        }
-
-        try {
             val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
             arrayInt = resources.getIntArray(arrayId)
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [2/3]!")
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [1/3]!")
             return arrayInt
         } catch (_: Exception) {
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [2/3]!")
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors not found [1/3]!")
         }
 
         try {
@@ -229,6 +220,15 @@ class MainHook : IXposedHookLoadPackage {
             val integer1 = getResourceValue(resources, "notification_element_blend_shade_mode_1", "integer")
             val integer2 = getResourceValue(resources, "notification_element_blend_shade_mode_2", "integer")
             arrayInt = intArrayOf(color1, integer1, color2, integer2)
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [2/3]!")
+            return arrayInt
+        } catch (_: Exception) {
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors not found [2/3]!")
+        }
+
+        try {
+            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
+            arrayInt = resources.getIntArray(arrayId)
             if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [3/3]!")
             return arrayInt
         } catch (_: Exception) {

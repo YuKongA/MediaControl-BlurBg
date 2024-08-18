@@ -15,8 +15,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 35
-        versionCode = 2330
-        versionName = "2.3.3"
+        versionCode = 2400
+        versionName = "2.4.0"
     }
     val properties = Properties()
     runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }
@@ -58,8 +58,8 @@ android {
             if (keystorePath != null) signingConfig = signingConfigs.getByName("github")
         }
     }
-    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
-    kotlin.jvmToolchain(21)
+    java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+    kotlin.jvmToolchain(17)
     packaging {
         resources. excludes += "**"
         applicationVariants.all {

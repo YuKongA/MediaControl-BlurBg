@@ -3,6 +3,7 @@ package top.yukonga.mediaControlBlur
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -13,9 +14,12 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import android.graphics.drawable.ClipDrawable
+import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
+import android.graphics.drawable.LayerDrawable
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -39,6 +43,7 @@ import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setBlurRoundRect
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendColors
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiViewBlurMode
 
+
 class MainHook : IXposedHookLoadPackage {
 
     @SuppressLint("DiscouragedApi")
@@ -52,15 +57,29 @@ class MainHook : IXposedHookLoadPackage {
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
                     val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
+                    val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
 
                     seekBarObserver?.constructors?.first()?.createAfterHook {
-                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 8.dp)
+                        val backgroundDrawable = GradientDrawable().apply {
+                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#20ffffff")))
+                            cornerRadius = 9.dp.toFloat()
+                        }
+
+                        val onProgressDrawable = GradientDrawable().apply {
+                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#ffffffff")))
+                            cornerRadius = 9.dp.toFloat()
+                        }
+
+                        val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, ClipDrawable(onProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL)))
+
+                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 9.dp)
                         val seekBar = it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
                         seekBar?.apply {
-                            thumb = (thumb as Drawable).apply {
-                                setMinimumWidth(8.dp)
-                                setMinimumHeight(8.dp)
+                            thumb = (thumb as LayerDrawable).apply {
+                                setMinimumWidth(9.dp)
+                                setMinimumHeight(9.dp)
                             }
+                            progressDrawable = layerDrawable
                         }
                     }
 
@@ -96,7 +115,7 @@ class MainHook : IXposedHookLoadPackage {
                             action3?.setColorFilter(Color.WHITE)
                             action4?.setColorFilter(Color.WHITE)
                             seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
-                            seekBar?.thumb?.colorFilter = colorFilter(Color.WHITE)
+                            seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                         } else {
                             seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
                             artistText?.setTextColor(grey)
@@ -110,7 +129,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action2?.setColorFilter(Color.BLACK)
                                 action3?.setColorFilter(Color.BLACK)
                                 action4?.setColorFilter(Color.BLACK)
-                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 0, 0, 0))
+                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.BLACK)
                             } else {
                                 titleText?.setTextColor(Color.WHITE)
                                 seamlessIcon?.setColorFilter(Color.WHITE)
@@ -119,7 +138,7 @@ class MainHook : IXposedHookLoadPackage {
                                 action2?.setColorFilter(Color.WHITE)
                                 action3?.setColorFilter(Color.WHITE)
                                 action4?.setColorFilter(Color.WHITE)
-                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.argb(165, 255, 255, 255))
+                                seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
                             }
 
                             val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@createAfterHook
@@ -155,21 +174,37 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     }
 
-                    playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook { hookParam ->
+                    var lockScreenStatus: Boolean? = null
+                    var darkModeStatus: Boolean? = null
+                    playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
                         val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
                         if (!isBackgroundBlurOpened) return@createBeforeHook
 
-                        hookParam.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
-                        hookParam.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
-                        hookParam.thisObject.objectHelper().setObject("mRadius", 0f)
+                        it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")?.alpha = 0
+                        it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")?.alpha = 0
+                        it.thisObject.objectHelper().setObject("mRadius", 0f)
 
-                        (hookParam.thisObject as ImageView).apply {
-                            setMiViewBlurMode(BACKGROUND)
-                            setBlurRoundRect(getNotificationElementRoundRect(context))
-                            getNotificationElementBlendShadeColors(context)?.let { setMiBackgroundBlendColors(it, 1f) }
+                        (it.thisObject as ImageView).setMiViewBlurMode(BACKGROUND)
+                        (it.thisObject as ImageView).setBlurRoundRect(getNotificationElementRoundRect(context))
+
+                        statusBarStateControllerImpl?.methodFinder()?.filterByName("getState")?.first()?.createAfterHook { hookParam1 ->
+                            val getStatusBarState = hookParam1.result as Int
+                            val isInLockScreen = getStatusBarState == 1
+                            val isDarkMode = isDarkMode(context)
+                            if (lockScreenStatus == null || lockScreenStatus != isInLockScreen || darkModeStatus != isDarkMode) {
+                                if (BuildConfig.DEBUG) Log.dx("getStatusBarState: $getStatusBarState")
+                                if (BuildConfig.DEBUG) Log.dx("darkModeStatus: $isDarkMode")
+                                lockScreenStatus = isInLockScreen
+                                darkModeStatus = isDarkMode
+                                (it.thisObject as ImageView).apply {
+                                    getNotificationElementBlendColors(context, isInLockScreen)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
+                                }
+                            }
                         }
+
+                        it.result = null
                     }
 
                     playerTwoCircleView?.methodFinder()?.filterByName("setBackground")?.first()?.createBeforeHook {
@@ -178,6 +213,7 @@ class MainHook : IXposedHookLoadPackage {
                         val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
                         if (!isBackgroundBlurOpened) return@createBeforeHook
 
+                        (it.thisObject as ImageView).background = null
                         it.result = null
                     }
                 } catch (t: Throwable) {
@@ -201,38 +237,59 @@ class MainHook : IXposedHookLoadPackage {
     }
 
     @SuppressLint("DiscouragedApi")
-    private fun getNotificationElementBlendShadeColors(context: Context): IntArray? {
+    private fun getNotificationElementBlendColors(context: Context, isInLockScreen: Boolean): IntArray? {
         val resources = context.resources
         val theme = context.theme
         var arrayInt: IntArray? = null
         try {
-            val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
-            arrayInt = resources.getIntArray(arrayId)
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [1/3]!")
+            if (isInLockScreen) {
+                val arrayId = resources.getIdentifier("notification_element_blend_keyguard_colors", "array", "com.android.systemui")
+                arrayInt = resources.getIntArray(arrayId)
+                if (BuildConfig.DEBUG) Log.dx("Notification element blend keyguard colors found successful [1/3]!")
+            } else {
+                val arrayId = resources.getIdentifier("notification_element_blend_shade_colors", "array", "com.android.systemui")
+                arrayInt = resources.getIntArray(arrayId)
+                if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [1/3]!")
+            }
             return arrayInt
         } catch (_: Exception) {
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors not found [1/3]!")
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [1/3]!")
         }
 
         try {
-            val color1 = getResourceValue(resources, "notification_element_blend_shade_color_1", "color", theme)
-            val color2 = getResourceValue(resources, "notification_element_blend_shade_color_2", "color", theme)
-            val integer1 = getResourceValue(resources, "notification_element_blend_shade_mode_1", "integer")
-            val integer2 = getResourceValue(resources, "notification_element_blend_shade_mode_2", "integer")
-            arrayInt = intArrayOf(color1, integer1, color2, integer2)
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [2/3]!")
+            if (isInLockScreen) {
+                val color1 = getResourceValue(resources, "notification_element_blend_keyguard_color_1", "color", theme)
+                val color2 = getResourceValue(resources, "notification_element_blend_keyguard_color_2", "color", theme)
+                val integer1 = getResourceValue(resources, "notification_element_blend_keyguard_mode_1", "integer")
+                val integer2 = getResourceValue(resources, "notification_element_blend_keyguard_mode_2", "integer")
+                arrayInt = intArrayOf(color1, integer1, color2, integer2)
+                if (BuildConfig.DEBUG) Log.dx("Notification element blend keyguard colors found successful [2/3]!")
+            } else {
+                val color1 = getResourceValue(resources, "notification_element_blend_shade_color_1", "color", theme)
+                val color2 = getResourceValue(resources, "notification_element_blend_shade_color_2", "color", theme)
+                val integer1 = getResourceValue(resources, "notification_element_blend_shade_mode_1", "integer")
+                val integer2 = getResourceValue(resources, "notification_element_blend_shade_mode_2", "integer")
+                arrayInt = intArrayOf(color1, integer1, color2, integer2)
+                if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors found successful [2/3]!")
+            }
             return arrayInt
         } catch (_: Exception) {
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend shade colors not found [2/3]!")
+            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [2/3]!")
         }
 
         try {
-            val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
-            arrayInt = resources.getIntArray(arrayId)
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [3/3]!")
+            if (isInLockScreen) {
+                val arrayId = resources.getIdentifier("notification_element_keyguard_colors", "array", "com.android.systemui")
+                arrayInt = resources.getIntArray(arrayId)
+                if (BuildConfig.DEBUG) Log.dx("Notification element keyguard colors found successful [3/3]!")
+            } else {
+                val arrayId = resources.getIdentifier("notification_element_blend_colors", "array", "com.android.systemui")
+                arrayInt = resources.getIntArray(arrayId)
+                if (BuildConfig.DEBUG) Log.dx("Notification element blend colors found successful [3/3]!")
+            }
             return arrayInt
         } catch (_: Exception) {
-            if (BuildConfig.DEBUG) Log.dx("Notification element blend colors not found [3/3]!")
+            if (BuildConfig.DEBUG) Log.dx("Notification element colors not found [3/3]!")
         }
 
         Log.ex("Notification element blend colors not found!")

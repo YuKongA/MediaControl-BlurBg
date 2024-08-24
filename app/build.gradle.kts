@@ -15,8 +15,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 35
-        versionCode = 2400
-        versionName = "2.4.0"
+        versionCode = 2410
+        versionName = "2.4.1"
     }
     val properties = Properties()
     runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }
@@ -61,7 +61,7 @@ android {
     java.toolchain.languageVersion = JavaLanguageVersion.of(17)
     kotlin.jvmToolchain(17)
     packaging {
-        resources. excludes += "**"
+        resources.excludes += "**"
         applicationVariants.all {
             outputs.all {
                 (this as BaseVariantOutputImpl).outputFileName = "MediaControlBlur-$versionName.apk"

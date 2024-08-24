@@ -193,7 +193,7 @@ class MainHook : IXposedHookLoadPackage {
                             val getStatusBarState = hookParam1.result as Int
                             val isInLockScreen = getStatusBarState == 1
                             val isDarkMode = isDarkMode(context)
-                            if (lockScreenStatus == null || lockScreenStatus != isInLockScreen || darkModeStatus != isDarkMode) {
+                            if (lockScreenStatus == null || darkModeStatus == null || lockScreenStatus != isInLockScreen || darkModeStatus != isDarkMode) {
                                 if (BuildConfig.DEBUG) Log.dx("getStatusBarState: $getStatusBarState")
                                 if (BuildConfig.DEBUG) Log.dx("darkModeStatus: $isDarkMode")
                                 lockScreenStatus = isInLockScreen

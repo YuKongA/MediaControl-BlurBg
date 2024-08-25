@@ -179,6 +179,41 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     }
 
+                    playerTwoCircleView?.constructors?.forEach { constructor ->
+                        constructor.createAfterHook {
+                            val context = AndroidAppHelper.currentApplication().applicationContext
+
+                            val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
+                            val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
+                            val mSysUIProvider = XposedHelpers.getObjectField(miuiStubInstance, "mSysUIProvider")
+                            val mStatusBarStateController = XposedHelpers.getObjectField(mSysUIProvider, "mStatusBarStateController")
+                            val getLazyClass = XposedHelpers.callMethod(mStatusBarStateController, "get")
+                            val getState = XposedHelpers.callMethod(getLazyClass, "getState")
+
+
+                            (it.thisObject as ImageView).setMiViewBlurMode(BACKGROUND)
+                            (it.thisObject as ImageView).setBlurRoundRect(getNotificationElementRoundRect(context))
+                            (it.thisObject as ImageView).apply {
+                                getNotificationElementBlendColors(context, getState == 1)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
+                            }
+
+                            statusBarStateControllerImpl?.methodFinder()?.filterByName("getState")?.first()?.createAfterHook { hookParam1 ->
+                                val getStatusBarState = hookParam1.result as Int
+                                val isInLockScreen = getStatusBarState == 1
+                                val isDarkMode = isDarkMode(context)
+                                if (lockScreenStatus == null || darkModeStatus == null || lockScreenStatus != isInLockScreen || darkModeStatus != isDarkMode) {
+                                    if (BuildConfig.DEBUG) Log.dx("getStatusBarState: $getStatusBarState")
+                                    if (BuildConfig.DEBUG) Log.dx("darkModeStatus: $isDarkMode")
+                                    lockScreenStatus = isInLockScreen
+                                    darkModeStatus = isDarkMode
+                                    (it.thisObject as ImageView).apply {
+                                        getNotificationElementBlendColors(context, isInLockScreen)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
@@ -194,35 +229,6 @@ class MainHook : IXposedHookLoadPackage {
                         mPaint1?.alpha = 0
                         mPaint2?.alpha = 0
                         it.thisObject.objectHelper().setObject("mRadius", 0f)
-
-                        (it.thisObject as ImageView).setMiViewBlurMode(BACKGROUND)
-                        (it.thisObject as ImageView).setBlurRoundRect(getNotificationElementRoundRect(context))
-
-                        val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
-                        val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
-                        val mSysUIProvider = XposedHelpers.getObjectField(miuiStubInstance, "mSysUIProvider")
-                        val mStatusBarStateController = XposedHelpers.getObjectField(mSysUIProvider, "mStatusBarStateController")
-                        val getLazyClass = XposedHelpers.callMethod(mStatusBarStateController, "get")
-                        val getState = XposedHelpers.callMethod(getLazyClass, "getState")
-
-                        (it.thisObject as ImageView).apply {
-                            getNotificationElementBlendColors(context, getState == 1)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
-                        }
-
-                        statusBarStateControllerImpl?.methodFinder()?.filterByName("getState")?.first()?.createAfterHook { hookParam1 ->
-                            val getStatusBarState = hookParam1.result as Int
-                            val isInLockScreen = getStatusBarState == 1
-                            val isDarkMode = isDarkMode(context)
-                            if (lockScreenStatus == null || darkModeStatus == null || lockScreenStatus != isInLockScreen || darkModeStatus != isDarkMode) {
-                                if (BuildConfig.DEBUG) Log.dx("getStatusBarState: $getStatusBarState")
-                                if (BuildConfig.DEBUG) Log.dx("darkModeStatus: $isDarkMode")
-                                lockScreenStatus = isInLockScreen
-                                darkModeStatus = isDarkMode
-                                (it.thisObject as ImageView).apply {
-                                    getNotificationElementBlendColors(context, isInLockScreen)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
-                                }
-                            }
-                        }
                     }
 
                     playerTwoCircleView?.methodFinder()?.filterByName("setBackground")?.first()?.createBeforeHook {

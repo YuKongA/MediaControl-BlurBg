@@ -60,12 +60,11 @@ class MainHook : IXposedHookLoadPackage {
                     var lockScreenStatus: Boolean? = null
                     var darkModeStatus: Boolean? = null
 
-                    val mediaControlPanel = loadClassOrNull("com.android.systemui.media.controls.ui.MediaControlPanel")
+                    val mediaViewHolder = loadClassOrNull("com.android.systemui.media.controls.models.player.MediaViewHolder")
+                    val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
-                    val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
-                    val mediaViewHolder = loadClassOrNull("com.android.systemui.media.controls.models.player.MediaViewHolder")
                     val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
                     val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
                     val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
@@ -77,6 +76,25 @@ class MainHook : IXposedHookLoadPackage {
                         val action2 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action2")
                         val action3 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action3")
                         val action4 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action4")
+                        val seekBar = it.thisObject.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
+
+                        val backgroundDrawable = GradientDrawable().apply {
+                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#20ffffff")))
+                            cornerRadius = 9.dp.toFloat()
+                        }
+
+                        val onProgressDrawable = GradientDrawable().apply {
+                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#ffffffff")))
+                            cornerRadius = 9.dp.toFloat()
+                        }
+
+                        val thumbDrawable = seekBar?.thumb as LayerDrawable
+                        val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, ClipDrawable(onProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL)))
+
+                        seekBar.apply {
+                            thumb = thumbDrawable
+                            progressDrawable = layerDrawable
+                        }
 
                         fun updateColorFilter() {
                             val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
@@ -102,61 +120,6 @@ class MainHook : IXposedHookLoadPackage {
 
                     seekBarObserver?.constructors?.first()?.createAfterHook {
                         it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 9.dp)
-                        val seekBar = it.args[0].objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
-
-                        val backgroundDrawable = GradientDrawable().apply {
-                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#20ffffff")))
-                            cornerRadius = 9.dp.toFloat()
-                        }
-
-                        val onProgressDrawable = GradientDrawable().apply {
-                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#ffffffff")))
-                            cornerRadius = 9.dp.toFloat()
-                        }
-
-                        val thumbDrawable = seekBar?.thumb as LayerDrawable
-                        val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, ClipDrawable(onProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL)))
-
-                        seekBar.apply {
-                            thumb = thumbDrawable
-                            progressDrawable = layerDrawable
-                        }
-                    }
-
-                    mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createAfterHook {
-                        val context = it.thisObject.objectHelper().getObjectOrNullUntilSuperclassAs<Context>("mContext") ?: return@createAfterHook
-
-                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
-
-                        val mMediaViewHolder = it.args[0]
-
-                        val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
-                        val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
-                        val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
-                        val seekBar = mMediaViewHolder.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
-                        val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
-                        val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
-                        val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
-
-                        val grey = if (isDarkMode(context)) Color.LTGRAY else Color.DKGRAY
-                        val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
-                        seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
-                        elapsedTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
-                        totalTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
-                        (appIcon?.parent as ViewGroup?)?.removeView(appIcon)
-                        if (!isBackgroundBlurOpened) {
-                            titleText?.setTextColor(Color.WHITE)
-                            seamlessIcon?.setColorFilter(Color.WHITE)
-                            seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
-                        } else {
-                            artistText?.setTextColor(grey)
-                            elapsedTimeView?.setTextColor(grey)
-                            totalTimeView?.setTextColor(grey)
-                            titleText?.setTextColor(grey)
-                            titleText?.setTextColor(color)
-                            seamlessIcon?.setColorFilter(color)
-                            seekBar?.progressDrawable?.colorFilter = colorFilter(color)
-                        }
                     }
 
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createAfterHook {

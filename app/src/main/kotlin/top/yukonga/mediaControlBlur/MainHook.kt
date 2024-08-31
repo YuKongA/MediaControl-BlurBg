@@ -60,6 +60,7 @@ class MainHook : IXposedHookLoadPackage {
                     var lockScreenStatus: Boolean? = null
                     var darkModeStatus: Boolean? = null
 
+                    val mediaControlPanel = loadClassOrNull("com.android.systemui.media.controls.ui.MediaControlPanel")
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
@@ -119,6 +120,42 @@ class MainHook : IXposedHookLoadPackage {
                         seekBar.apply {
                             thumb = thumbDrawable
                             progressDrawable = layerDrawable
+                        }
+                    }
+
+                    mediaControlPanel?.methodFinder()?.filterByName("attachPlayer")?.first()?.createAfterHook {
+                        val context = it.thisObject.objectHelper().getObjectOrNullUntilSuperclassAs<Context>("mContext") ?: return@createAfterHook
+
+                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+
+                        val mMediaViewHolder = it.args[0]
+
+                        val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
+                        val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
+                        val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
+                        val seekBar = mMediaViewHolder.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
+                        val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
+                        val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
+                        val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
+
+                        val grey = if (isDarkMode(context)) Color.LTGRAY else Color.DKGRAY
+                        val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
+                        seekBar?.thumb?.colorFilter = colorFilter(Color.TRANSPARENT)
+                        elapsedTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
+                        totalTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
+                        (appIcon?.parent as ViewGroup?)?.removeView(appIcon)
+                        if (!isBackgroundBlurOpened) {
+                            titleText?.setTextColor(Color.WHITE)
+                            seamlessIcon?.setColorFilter(Color.WHITE)
+                            seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
+                        } else {
+                            artistText?.setTextColor(grey)
+                            elapsedTimeView?.setTextColor(grey)
+                            totalTimeView?.setTextColor(grey)
+                            titleText?.setTextColor(grey)
+                            titleText?.setTextColor(color)
+                            seamlessIcon?.setColorFilter(color)
+                            seekBar?.progressDrawable?.colorFilter = colorFilter(color)
                         }
                     }
 

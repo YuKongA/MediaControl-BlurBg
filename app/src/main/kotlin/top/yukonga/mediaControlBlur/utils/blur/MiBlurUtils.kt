@@ -1,13 +1,16 @@
 package top.yukonga.mediaControlBlur.utils.blur
 
 import android.graphics.Outline
-import android.util.Log
 import android.view.View
 import android.view.ViewOutlineProvider
 
 object MiBlurUtils {
     const val BACKGROUND = 1
     const val FOREGROUND = 2
+
+    private val setBackgroundBlur by lazy {
+        View::class.java.getDeclaredMethod("setBackgroundBlur", Integer.TYPE, FloatArray::class.java, Array<IntArray>::class.java)
+    }
 
     private val setMiViewBlurMode by lazy {
         View::class.java.getDeclaredMethod("setMiViewBlurMode", Integer.TYPE)
@@ -41,6 +44,10 @@ object MiBlurUtils {
         View::class.java.getDeclaredMethod("disableMiBackgroundContainBelow", java.lang.Boolean.TYPE)
     }
 
+    fun View.setBackgroundBlur(blurRadius: Int, cornerRadius: FloatArray, blendModes: Array<IntArray>) {
+        setBackgroundBlur.invoke(this, blurRadius, cornerRadius, blendModes)
+    }
+
     fun View.setMiBackgroundBlurMode(mode: Int) {
         setMiBackgroundBlurMode.invoke(this, mode)
     }
@@ -49,16 +56,17 @@ object MiBlurUtils {
         setMiViewBlurMode.invoke(this, mode)
     }
 
-    fun View.setMiBackgroundBlurRadius(radius: Int) {
-        if (radius < 0 || radius > 500) {
-            Log.e("MiBlurUtils", "setMiBackgroundBlurRadius error radius is " + radius + " " + this.javaClass.getName() + " hashcode " + this.hashCode())
-            return
+    fun View.setMiBackgroundBlurRadius(blurRadios: Int) {
+        val radius = when {
+            blurRadios < 0 -> 0
+            blurRadios > 500 -> 500
+            else -> blurRadios
         }
         setMiBackgroundBlurRadius.invoke(this, radius)
     }
 
-    fun View.setPassWindowBlurEnabled(z: Boolean) {
-        setPassWindowBlurEnabled.invoke(this, z)
+    fun View.setPassWindowBlurEnabled(enabled: Boolean) {
+        setPassWindowBlurEnabled.invoke(this, enabled)
     }
 
     fun View.disableMiBackgroundContainBelow(z: Boolean) {
@@ -73,8 +81,8 @@ object MiBlurUtils {
         clearMiBackgroundBlendColor.invoke(this)
     }
 
-    fun View.setBackgroundBlurScaleRatio(ratio: Float) {
-        setMiBackgroundBlurScaleRatio.invoke(this, ratio)
+    fun View.setBackgroundBlurScaleRatio(blurScaleRadio: Float) {
+        setMiBackgroundBlurScaleRatio.invoke(this, blurScaleRadio)
     }
 
     fun View.setMiBackgroundBlendColors(iArr: IntArray, f: Float) {

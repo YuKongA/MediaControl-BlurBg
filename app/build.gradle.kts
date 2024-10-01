@@ -15,8 +15,8 @@ android {
         applicationId = namespace
         minSdk = 34
         targetSdk = 35
-        versionCode = 2530
-        versionName = "2.5.3"
+        versionCode = 3000
+        versionName = "3.0.0"
     }
     val properties = Properties()
     runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }

@@ -5,7 +5,6 @@ import android.app.AndroidAppHelper
 import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Resources
-import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -19,9 +18,7 @@ import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
+import android.os.Build
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup
@@ -60,22 +57,33 @@ class MainHook : IXposedHookLoadPackage {
                     var lockScreenStatus: Boolean? = null
                     var darkModeStatus: Boolean? = null
 
-                    val mediaViewHolder = loadClassOrNull("com.android.systemui.media.controls.models.player.MediaViewHolder")
-                    val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
+                    val mediaViewHolder = if (Build.VERSION.SDK_INT > 34) {
+                        loadClassOrNull("com.android.systemui.media.controls.ui.view.MediaViewHolder")
+                    } else {
+                        loadClassOrNull("com.android.systemui.media.controls.models.player.MediaViewHolder")
+                    }
+                    val seekBarObserver = if (Build.VERSION.SDK_INT > 34) {
+                        loadClassOrNull("com.android.systemui.media.controls.ui.binder.SeekBarObserver")
+                    } else {
+                        loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
+                    }
+                    val notifUtil = if (Build.VERSION.SDK_INT > 34) {
+                        loadClassOrNull("com.miui.systemui.notification.MiuiBaseNotifUtil")
+                    } else {
+                        loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
+                    }
+                    val playerTwoCircleView =
+                        if (Build.VERSION.SDK_INT > 34) {
+                            loadClassOrNull("com.miui.systemui.notification.media.PlayerTwoCircleView")
+                        } else {
+                            loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
+                        }
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
-                    val notificationUtil = loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
-                    val playerTwoCircleView = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
                     val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
                     val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
                     val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
 
                     mediaViewHolder?.constructors?.first()?.createAfterHook {
-                        val context = AndroidAppHelper.currentApplication().applicationContext
-                        val action0 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action0")
-                        val action1 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action1")
-                        val action2 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action2")
-                        val action3 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action3")
-                        val action4 = it.thisObject.objectHelper().getObjectOrNullAs<ImageButton>("action4")
                         val seekBar = it.thisObject.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
 
                         val backgroundDrawable = GradientDrawable().apply {
@@ -95,27 +103,6 @@ class MainHook : IXposedHookLoadPackage {
                             thumb = thumbDrawable
                             progressDrawable = layerDrawable
                         }
-
-                        fun updateColorFilter() {
-                            val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
-                            action0?.setColorFilter(color)
-                            action1?.setColorFilter(color)
-                            action2?.setColorFilter(color)
-                            action3?.setColorFilter(color)
-                            action4?.setColorFilter(color)
-                        }
-
-                        updateColorFilter()
-
-                        val darkModeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-                            override fun onChange(selfChange: Boolean) {
-                                updateColorFilter()
-                            }
-                        }
-
-                        context.contentResolver.registerContentObserver(
-                            Settings.Secure.getUriFor("ui_night_mode"), false, darkModeObserver
-                        )
                     }
 
                     seekBarObserver?.constructors?.first()?.createAfterHook {
@@ -125,10 +112,15 @@ class MainHook : IXposedHookLoadPackage {
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createAfterHook {
                         val context = it.thisObject.objectHelper().getObjectOrNullUntilSuperclassAs<Context>("mContext") ?: return@createAfterHook
 
-                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
 
                         val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder") ?: return@createAfterHook
 
+                        val action0 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action0")
+                        val action1 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action1")
+                        val action2 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action2")
+                        val action3 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action3")
+                        val action4 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action4")
                         val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
                         val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
                         val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
@@ -173,6 +165,11 @@ class MainHook : IXposedHookLoadPackage {
                         elapsedTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
                         totalTimeView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
                         if (!isBackgroundBlurOpened) {
+                            action0?.setColorFilter(color)
+                            action1?.setColorFilter(color)
+                            action2?.setColorFilter(color)
+                            action3?.setColorFilter(color)
+                            action4?.setColorFilter(color)
                             titleText?.setTextColor(Color.WHITE)
                             seamlessIcon?.setColorFilter(Color.WHITE)
                             seekBar?.progressDrawable?.colorFilter = colorFilter(Color.WHITE)
@@ -181,6 +178,11 @@ class MainHook : IXposedHookLoadPackage {
                             elapsedTimeView?.setTextColor(grey)
                             totalTimeView?.setTextColor(grey)
                             titleText?.setTextColor(grey)
+                            action0?.setColorFilter(color)
+                            action1?.setColorFilter(color)
+                            action2?.setColorFilter(color)
+                            action3?.setColorFilter(color)
+                            action4?.setColorFilter(color)
                             titleText?.setTextColor(color)
                             seamlessIcon?.setColorFilter(color)
                             seekBar?.progressDrawable?.colorFilter = colorFilter(color)
@@ -195,7 +197,6 @@ class MainHook : IXposedHookLoadPackage {
                             val mStatusBarStateController = XposedHelpers.getObjectField(mSysUIProvider, "mStatusBarStateController")
                             val getLazyClass = XposedHelpers.callMethod(mStatusBarStateController, "get")
                             val getState = XposedHelpers.callMethod(getLazyClass, "getState")
-
 
                             (it.thisObject as ImageView).setMiViewBlurMode(BACKGROUND)
                             (it.thisObject as ImageView).setBlurRoundRect(getNotificationElementRoundRect(context))
@@ -223,7 +224,7 @@ class MainHook : IXposedHookLoadPackage {
                     playerTwoCircleView?.methodFinder()?.filterByName("onDraw")?.first()?.createBeforeHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
-                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
                         if (!isBackgroundBlurOpened) return@createBeforeHook
 
                         val mPaint1 = it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint1")
@@ -240,8 +241,10 @@ class MainHook : IXposedHookLoadPackage {
                     playerTwoCircleView?.methodFinder()?.filterByName("setBackground")?.first()?.createBeforeHook {
                         val context = AndroidAppHelper.currentApplication().applicationContext
 
-                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notificationUtil, "isBackgroundBlurOpened", context) as Boolean
+                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
                         if (!isBackgroundBlurOpened) return@createBeforeHook
+
+                        (it.thisObject as ImageView).background = null
 
                         it.result = null
                     }

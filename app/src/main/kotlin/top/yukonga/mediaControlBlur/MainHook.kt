@@ -72,12 +72,11 @@ class MainHook : IXposedHookLoadPackage {
                     } else {
                         loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
                     }
-                    val playerTwoCircleView =
-                        if (Build.VERSION.SDK_INT > 34) {
-                            loadClassOrNull("com.miui.systemui.notification.media.PlayerTwoCircleView")
-                        } else {
-                            loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
-                        }
+                    val playerTwoCircleView = if (Build.VERSION.SDK_INT > 34) {
+                        loadClassOrNull("com.miui.systemui.notification.media.PlayerTwoCircleView")
+                    } else {
+                        loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
+                    }
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
                     val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
@@ -245,11 +244,17 @@ class MainHook : IXposedHookLoadPackage {
                         if (!isBackgroundBlurOpened) return@createBeforeHook
 
                         (it.thisObject as ImageView).background = null
-
                         it.result = null
                     }
                 } catch (t: Throwable) {
                     Log.ex(t)
+                }
+
+                if (Build.VERSION.SDK_INT == 35) {
+                    val graphicsA15 = loadClassOrNull("androidx.palette.graphics.Palette\$Builder\$1")
+                    graphicsA15?.methodFinder()?.filterByName("onPostExecute")?.first()?.createBeforeHook {
+                        it.result = null
+                    }
                 }
             }
 

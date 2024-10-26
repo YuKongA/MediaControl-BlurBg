@@ -13,6 +13,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.GradientDrawable
@@ -128,6 +129,9 @@ class MainHook : IXposedHookLoadPackage {
                         val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
                         val albumView = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("albumView")
                         val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
+
+                        titleText?.typeface = Typeface.create(titleText?.typeface, Typeface.NORMAL)
+                        artistText?.typeface = Typeface.create(artistText?.typeface, Typeface.NORMAL)
 
                         val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@createAfterHook
                         val artworkLayer = artwork.loadDrawable(context) ?: return@createAfterHook

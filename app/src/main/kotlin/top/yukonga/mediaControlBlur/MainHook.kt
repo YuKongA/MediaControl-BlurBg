@@ -13,13 +13,11 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
-import android.os.Build
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup
@@ -45,10 +43,8 @@ import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setBlurRoundRect
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendColors
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiViewBlurMode
 
-
 class MainHook : IXposedHookLoadPackage {
 
-    @SuppressLint("DiscouragedApi")
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         EzXHelper.initHandleLoadPackage(lpparam)
         EzXHelper.setLogTag("MediaControlBlur")
@@ -58,30 +54,30 @@ class MainHook : IXposedHookLoadPackage {
                     var lockScreenStatus: Boolean? = null
                     var darkModeStatus: Boolean? = null
 
-                    val mediaViewHolder = if (Build.VERSION.SDK_INT > 34) {
-                        loadClassOrNull("com.android.systemui.media.controls.ui.view.MediaViewHolder")
-                    } else {
-                        loadClassOrNull("com.android.systemui.media.controls.models.player.MediaViewHolder")
-                    }
-                    val seekBarObserver = if (Build.VERSION.SDK_INT > 34) {
-                        loadClassOrNull("com.android.systemui.media.controls.ui.binder.SeekBarObserver")
-                    } else {
-                        loadClassOrNull("com.android.systemui.media.controls.models.player.SeekBarObserver")
-                    }
-                    val notifUtil = if (Build.VERSION.SDK_INT > 34) {
-                        loadClassOrNull("com.miui.systemui.notification.MiuiBaseNotifUtil")
-                    } else {
-                        loadClassOrNull("com.android.systemui.statusbar.notification.NotificationUtil")
-                    }
-                    val playerTwoCircleView = if (Build.VERSION.SDK_INT > 34) {
-                        loadClassOrNull("com.miui.systemui.notification.media.PlayerTwoCircleView")
-                    } else {
-                        loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.PlayerTwoCircleView")
-                    }
+                    val mediaViewHolder = loadClassOrNull("com.android.systemui.media.controls.ui.view.MediaViewHolder")
+                    val seekBarObserver = loadClassOrNull("com.android.systemui.media.controls.ui.binder.SeekBarObserver")
+                    val notifUtil = loadClassOrNull("com.miui.systemui.notification.MiuiBaseNotifUtil")
+                    val playerTwoCircleView = loadClassOrNull("com.miui.systemui.notification.media.PlayerTwoCircleView")
                     val miuiMediaControlPanel = loadClassOrNull("com.android.systemui.statusbar.notification.mediacontrol.MiuiMediaControlPanel")
                     val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
                     val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
                     val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
+
+
+                    // 导致拖动 SeekBar 改变歌曲标题/艺术家名字颜色的实际位置不在这里，目前暂时作为代替解决方案。
+                    seekBarObserver?.methodFinder()?.filterByName("onChanged")?.first()?.createBeforeHook {
+                        val context = AndroidAppHelper.currentApplication().applicationContext
+                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
+                        val mMediaViewHolder = it.thisObject.objectHelper().getObjectOrNullUntilSuperclass("holder") ?: return@createBeforeHook
+                        val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
+                        val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
+                        val grey = if (isDarkMode(context)) Color.LTGRAY else Color.DKGRAY
+                        val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
+                        if (isBackgroundBlurOpened) {
+                            artistText?.setTextColor(grey)
+                            titleText?.setTextColor(color)
+                        }
+                    }
 
                     mediaViewHolder?.constructors?.first()?.createAfterHook {
                         val seekBar = it.thisObject.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
@@ -96,17 +92,14 @@ class MainHook : IXposedHookLoadPackage {
                             cornerRadius = 9.dp.toFloat()
                         }
 
-                        val thumbDrawable = seekBar?.thumb as LayerDrawable
-                        val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, ClipDrawable(onProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL)))
-
-                        seekBar.apply {
-                            thumb = thumbDrawable
-                            progressDrawable = layerDrawable
+                        val layerDrawable = LayerDrawable(
+                            arrayOf(backgroundDrawable, ClipDrawable(onProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL))
+                        ).apply {
+                            setLayerHeight(0, 9.dp)
+                            setLayerHeight(1, 9.dp)
                         }
-                    }
 
-                    seekBarObserver?.constructors?.first()?.createAfterHook {
-                        it.thisObject.objectHelper().setObject("seekBarEnabledMaxHeight", 9.dp)
+                        seekBar?.progressDrawable = layerDrawable
                     }
 
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createAfterHook {
@@ -129,9 +122,6 @@ class MainHook : IXposedHookLoadPackage {
                         val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
                         val albumView = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("albumView")
                         val appIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("appIcon")
-
-                        titleText?.typeface = Typeface.create(titleText?.typeface, Typeface.NORMAL)
-                        artistText?.typeface = Typeface.create(artistText?.typeface, Typeface.NORMAL)
 
                         val artwork = it.args[0].objectHelper().getObjectOrNullAs<Icon>("artwork") ?: return@createAfterHook
                         val artworkLayer = artwork.loadDrawable(context) ?: return@createAfterHook
@@ -180,7 +170,6 @@ class MainHook : IXposedHookLoadPackage {
                             artistText?.setTextColor(grey)
                             elapsedTimeView?.setTextColor(grey)
                             totalTimeView?.setTextColor(grey)
-                            titleText?.setTextColor(grey)
                             action0?.setColorFilter(color)
                             action1?.setColorFilter(color)
                             action2?.setColorFilter(color)
@@ -234,8 +223,6 @@ class MainHook : IXposedHookLoadPackage {
                         val mPaint2 = it.thisObject.objectHelper().getObjectOrNullAs<Paint>("mPaint2")
                         if (mPaint1?.alpha == 0) return@createBeforeHook
 
-                        if (BuildConfig.DEBUG) Log.dx("PlayerTwoCircleView onDraw called!")
-
                         mPaint1?.alpha = 0
                         mPaint2?.alpha = 0
                         it.thisObject.objectHelper().setObject("mRadius", 0f)
@@ -252,13 +239,6 @@ class MainHook : IXposedHookLoadPackage {
                     }
                 } catch (t: Throwable) {
                     Log.ex(t)
-                }
-
-                if (Build.VERSION.SDK_INT == 35) {
-                    val graphicsA15 = loadClassOrNull("androidx.palette.graphics.Palette\$Builder\$1")
-                    graphicsA15?.methodFinder()?.filterByName("onPostExecute")?.first()?.createBeforeHook {
-                        it.result = null
-                    }
                 }
             }
 
@@ -277,6 +257,7 @@ class MainHook : IXposedHookLoadPackage {
     }
 
     @SuppressLint("DiscouragedApi")
+
     private fun getNotificationElementBlendColors(context: Context, isInLockScreen: Boolean): IntArray? {
         val resources = context.resources
         val theme = context.theme

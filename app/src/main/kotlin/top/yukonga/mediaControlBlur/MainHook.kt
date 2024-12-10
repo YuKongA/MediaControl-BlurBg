@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -19,6 +20,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageButton
@@ -44,7 +46,6 @@ import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiBackgroundBlendC
 import top.yukonga.mediaControlBlur.utils.blur.MiBlurUtils.setMiViewBlurMode
 
 class MainHook : IXposedHookLoadPackage {
-
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         EzXHelper.initHandleLoadPackage(lpparam)
         EzXHelper.setLogTag("MediaControlBlur")
@@ -62,7 +63,6 @@ class MainHook : IXposedHookLoadPackage {
                     val statusBarStateControllerImpl = loadClassOrNull("com.android.systemui.statusbar.StatusBarStateControllerImpl")
                     val miuiStubClass = loadClassOrNull("miui.stub.MiuiStub")
                     val miuiStubInstance = XposedHelpers.getStaticObjectField(miuiStubClass, "INSTANCE")
-
 
                     // 导致拖动 SeekBar 改变歌曲标题/艺术家名字颜色的实际位置不在这里，目前暂时作为代替解决方案。
                     seekBarObserver?.methodFinder()?.filterByName("onChanged")?.first()?.createBeforeHook {
@@ -102,7 +102,10 @@ class MainHook : IXposedHookLoadPackage {
                         seekBar?.progressDrawable = layerDrawable
                     }
 
+                    var mediaControlPanelInstance: Any? = null
+
                     miuiMediaControlPanel?.methodFinder()?.filterByName("bindPlayer")?.first()?.createAfterHook {
+                        mediaControlPanelInstance = it.thisObject
                         val context = it.thisObject.objectHelper().getObjectOrNullUntilSuperclassAs<Context>("mContext") ?: return@createAfterHook
 
                         val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
@@ -193,7 +196,9 @@ class MainHook : IXposedHookLoadPackage {
                             (it.thisObject as ImageView).setMiViewBlurMode(BACKGROUND)
                             (it.thisObject as ImageView).setBlurRoundRect(getNotificationElementRoundRect(context))
                             (it.thisObject as ImageView).apply {
-                                getNotificationElementBlendColors(context, getState == 1)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
+                                getNotificationElementBlendColors(context, getState == 1, isDarkMode(context))?.let { iArr ->
+                                    setMiBackgroundBlendColors(iArr, 1f)
+                                }
                             }
 
                             statusBarStateControllerImpl?.methodFinder()?.filterByName("getState")?.first()?.createAfterHook { hookParam1 ->
@@ -206,7 +211,41 @@ class MainHook : IXposedHookLoadPackage {
                                     lockScreenStatus = isInLockScreen
                                     darkModeStatus = isDarkMode
                                     (it.thisObject as ImageView).apply {
-                                        getNotificationElementBlendColors(context, isInLockScreen)?.let { iArr -> setMiBackgroundBlendColors(iArr, 1f) }
+                                        getNotificationElementBlendColors(context, isInLockScreen, darkModeStatus)?.let { iArr ->
+                                            setMiBackgroundBlendColors(iArr, 1f)
+                                        }
+                                    }
+                                    if (mediaControlPanelInstance != null) {
+                                        val isBackgroundBlurOpened = XposedHelpers.callStaticMethod(notifUtil, "isBackgroundBlurOpened", context) as Boolean
+                                        if (isBackgroundBlurOpened) {
+                                            val mMediaViewHolder = mediaControlPanelInstance.objectHelper().getObjectOrNullUntilSuperclass("mMediaViewHolder")
+                                            if (mMediaViewHolder != null) {
+                                                val action0 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action0")
+                                                val action1 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action1")
+                                                val action2 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action2")
+                                                val action3 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action3")
+                                                val action4 = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageButton>("action4")
+                                                val titleText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("titleText")
+                                                val artistText = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("artistText")
+                                                val seamlessIcon = mMediaViewHolder.objectHelper().getObjectOrNullAs<ImageView>("seamlessIcon")
+                                                val seekBar = mMediaViewHolder.objectHelper().getObjectOrNullAs<SeekBar>("seekBar")
+                                                val elapsedTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("elapsedTimeView")
+                                                val totalTimeView = mMediaViewHolder.objectHelper().getObjectOrNullAs<TextView>("totalTimeView")
+                                                val grey = if (isDarkMode(context)) Color.LTGRAY else Color.DKGRAY
+                                                val color = if (isDarkMode(context)) Color.WHITE else Color.BLACK
+                                                artistText?.setTextColor(grey)
+                                                elapsedTimeView?.setTextColor(grey)
+                                                totalTimeView?.setTextColor(grey)
+                                                action0?.setColorFilter(color)
+                                                action1?.setColorFilter(color)
+                                                action2?.setColorFilter(color)
+                                                action3?.setColorFilter(color)
+                                                action4?.setColorFilter(color)
+                                                titleText?.setTextColor(color)
+                                                seamlessIcon?.setColorFilter(color)
+                                                seekBar?.progressDrawable?.colorFilter = colorFilter(color)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -257,10 +296,15 @@ class MainHook : IXposedHookLoadPackage {
     }
 
     @SuppressLint("DiscouragedApi")
-
-    private fun getNotificationElementBlendColors(context: Context, isInLockScreen: Boolean): IntArray? {
-        val resources = context.resources
+    private fun getNotificationElementBlendColors(context: Context, isInLockScreen: Boolean, darkMode: Boolean): IntArray? {
+        var resources = context.resources
         val theme = context.theme
+        if (darkMode) {
+            val configuration = Configuration(resources.configuration)
+            configuration.uiMode = (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
+            val context = ContextThemeWrapper(context, theme).createConfigurationContext(configuration)
+            resources = context.resources
+        }
         var arrayInt: IntArray? = null
         try {
             if (isInLockScreen) {

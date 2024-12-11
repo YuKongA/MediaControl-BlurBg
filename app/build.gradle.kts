@@ -9,14 +9,14 @@ plugins {
 }
 
 android {
-    namespace = "top.yukonga.mediaControlBlur"
+    namespace = "top.yukonga.mediaControlOpt"
     compileSdk = 35
     defaultConfig {
         applicationId = namespace
-        minSdk = 34
+        minSdk = 35
         targetSdk = 35
-        versionCode = 3100
-        versionName = "3.1.0"
+        versionCode = 4000
+        versionName = "4.0.0"
     }
     val properties = Properties()
     runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }
@@ -58,13 +58,13 @@ android {
             if (keystorePath != null) signingConfig = signingConfigs.getByName("github")
         }
     }
-    java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-    kotlin.jvmToolchain(17)
+    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+    kotlin.jvmToolchain(21)
     packaging {
         resources.excludes += "**"
         applicationVariants.all {
             outputs.all {
-                (this as BaseVariantOutputImpl).outputFileName = "MediaControlBlur-$versionName.apk"
+                (this as BaseVariantOutputImpl).outputFileName = "MediaControlOpt-$versionName.apk"
             }
         }
     }

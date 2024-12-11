@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:label="MediaControlBlur"
+        android:label="MediaControlOpt"
         tools:ignore="MissingApplicationIcon">
         <meta-data
             android:name="xposedscope"
@@ -11,7 +11,7 @@
 
         <meta-data
             android:name="xposeddescription"
-            android:value="Media Control Blur Background." />
+            android:value="媒体通知专辑圆角优化" />
 
         <meta-data
             android:name="xposedminversion"

@@ -1,3 +1,3 @@
--keep class top.yukonga.mediaControlBlur.MainHook {
+-keep class top.yukonga.mediaControlOpt.MainHook {
     <init>();
 }

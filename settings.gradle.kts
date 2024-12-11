@@ -24,5 +24,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MediaControlBlur"
+rootProject.name = "MediaControlOpt"
 include(":app")

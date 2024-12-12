@@ -11,7 +11,7 @@
 
         <meta-data
             android:name="xposeddescription"
-            android:value="媒体通知专辑圆角优化" />
+            android:value="优化媒体通知专辑圆角及进度条样式" />
 
         <meta-data
             android:name="xposedminversion"

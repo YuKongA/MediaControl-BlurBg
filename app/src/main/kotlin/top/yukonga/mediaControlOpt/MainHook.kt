@@ -40,7 +40,7 @@ class MainHook : IXposedHookLoadPackage {
                             cornerRadius = 7.dp.toFloat()
                         }
                         val onProgressDrawable = GradientDrawable().apply {
-                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#ffffffff")))
+                            color = ColorStateList(arrayOf(intArrayOf()), intArrayOf(Color.parseColor("#ccffffff")))
                             cornerRadius = 7.dp.toFloat()
                         }
                         val layerDrawable = LayerDrawable(
